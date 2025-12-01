@@ -18,12 +18,12 @@ if (!isset($page_title)) {
     <div class="brand">MRS 台账</div>
     <?php if (mrs_is_user_logged_in()): ?>
     <nav class="nav">
-        <a href="/mrs/index.php?action=home">仪表盘</a>
-        <a href="/mrs/index.php?action=inbound">入库录入</a>
-        <a href="/mrs/index.php?action=outbound">出库核销</a>
-        <a href="/mrs/index.php?action=inventory">库存快照</a>
-        <a href="/mrs/index.php?action=reports">统计报表</a>
-        <a href="/mrs/index.php?action=logout" class="danger">退出</a>
+        <a href="/mrs/ap/index.php?action=home">仪表盘</a>
+        <a href="/mrs/ap/index.php?action=inbound">入库录入</a>
+        <a href="/mrs/ap/index.php?action=outbound">出库核销</a>
+        <a href="/mrs/ap/index.php?action=inventory">库存快照</a>
+        <a href="/mrs/ap/index.php?action=reports">统计报表</a>
+        <a href="/mrs/ap/index.php?action=logout" class="danger">退出</a>
     </nav>
     <?php endif; ?>
 </header>

@@ -1,38 +1,23 @@
 <?php
 /**
- * MRS Package Ledger - Frontend Router
- * File: dc_html/mrs/index.php
+ * MRS System Front Entry Placeholder
+ * Path: dc_html/mrs/index.php
+ * Note: Reserved for future public-facing features. Admin portal is located at /mrs/ap/.
  */
-
-define('MRS_ENTRY', true);
-
-define('PROJECT_ROOT', dirname(dirname(__DIR__)));
-
-require_once PROJECT_ROOT . '/app/mrs/bootstrap.php';
-
-$action = $_GET['action'] ?? 'home';
-$action = basename($action);
-
-$allowed_actions = [
-    'home',
-    'login',
-    'logout',
-    'inbound',
-    'outbound',
-    'inventory',
-    'reports'
-];
-
-if (!in_array($action, $allowed_actions)) {
-    http_response_code(404);
-    die('Invalid action');
-}
-
-$action_file = MRS_ACTION_PATH . '/' . $action . '.php';
-
-if (file_exists($action_file)) {
-    require_once $action_file;
-} else {
-    http_response_code(404);
-    die('Action not found');
-}
+?>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRS 系统</title>
+    <link rel="stylesheet" href="/mrs/css/login-v2.css">
+</head>
+<body class="login-page">
+    <div class="login-card">
+        <h1>MRS 系统入口预留</h1>
+        <p class="subtitle">公共入口暂未开放，请使用后台管理入口访问。</p>
+        <a class="btn" href="/mrs/ap/index.php?action=login">进入后台管理</a>
+    </div>
+</body>
+</html>

@@ -97,7 +97,7 @@ function mrs_destroy_user_session() {
 
 function mrs_require_login() {
     if (!mrs_is_user_logged_in()) {
-        header('Location: /mrs/index.php?action=login');
+        header('Location: /mrs/ap/index.php?action=login');
         exit;
     }
 }

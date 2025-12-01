@@ -8,10 +8,10 @@ include MRS_VIEW_PATH . '/header.php';
 <section class="card">
     <h2>快捷入口</h2>
     <div class="quick-links">
-        <a class="btn" href="/mrs/index.php?action=inbound">入库录入</a>
-        <a class="btn" href="/mrs/index.php?action=outbound">出库核销</a>
-        <a class="btn" href="/mrs/index.php?action=inventory">库存快照</a>
-        <a class="btn" href="/mrs/index.php?action=reports">统计报表</a>
+        <a class="btn" href="/mrs/ap/index.php?action=inbound">入库录入</a>
+        <a class="btn" href="/mrs/ap/index.php?action=outbound">出库核销</a>
+        <a class="btn" href="/mrs/ap/index.php?action=inventory">库存快照</a>
+        <a class="btn" href="/mrs/ap/index.php?action=reports">统计报表</a>
     </div>
 </section>
 <section class="card">

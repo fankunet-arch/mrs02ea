@@ -1,6 +1,6 @@
 <?php
 if (mrs_is_user_logged_in()) {
-    header('Location: /mrs/index.php?action=home');
+    header('Location: /mrs/ap/index.php?action=home');
     exit;
 }
 
@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = mrs_authenticate_user($pdo, $username, $password);
     if ($user) {
         mrs_create_user_session($user);
-        header('Location: /mrs/index.php?action=home');
+        header('Location: /mrs/ap/index.php?action=home');
         exit;
     } else {
         $error = '用户名或密码错误，或账户未激活。';

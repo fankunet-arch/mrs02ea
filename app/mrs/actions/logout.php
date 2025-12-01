@@ -1,4 +1,4 @@
 <?php
 mrs_destroy_user_session();
-header('Location: /mrs/index.php?action=login');
+header('Location: /mrs/ap/index.php?action=login');
 exit;
