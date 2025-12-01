@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MRS 系统</title>
-    <link rel="stylesheet" href="/mrs/css/login-v2.css">
+    <link rel="stylesheet" href="/mrs/ap/css/login-v2.css">
 </head>
 <body class="login-page">
     <div class="login-card">

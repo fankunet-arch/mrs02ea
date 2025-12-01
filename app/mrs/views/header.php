@@ -10,8 +10,8 @@ if (!isset($page_title)) {
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
-    <link rel="stylesheet" href="/mrs/css/backend.css">
-    <link rel="stylesheet" href="/mrs/css/quick_ops.css">
+    <link rel="stylesheet" href="/mrs/ap/css/backend.css">
+    <link rel="stylesheet" href="/mrs/ap/css/quick_ops.css">
 </head>
 <body>
 <header class="topbar">

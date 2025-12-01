@@ -26,12 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MRS 登录</title>
-    <link rel="stylesheet" href="/mrs/css/login-v2.css">
+    <link rel="stylesheet" href="/mrs/ap/css/login-v2.css">
 </head>
 <body class="login-page">
     <div class="login-card">
         <h1>MRS 台账登录</h1>
-        <p class="subtitle">共享 Express 用户库 · 独立运行</p>
         <?php if ($error): ?>
             <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
