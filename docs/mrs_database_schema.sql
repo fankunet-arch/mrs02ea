@@ -1,0 +1,127 @@
+-- =============================================
+-- MRS 物料收发管理系统 数据库设计
+-- 版本: v3.0 (Pure Ledger Edition)
+-- 日期: 2025-12-01
+-- 说明: 基于"外部赋码"与"包裹台账"的纯粹库存管理系统
+-- =============================================
+
+-- 创建数据库
+CREATE DATABASE IF NOT EXISTS mrs_system
+    DEFAULT CHARACTER SET utf8mb4
+    DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE mrs_system;
+
+-- =============================================
+-- 2. 物料表 (SKU)
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS mrs_sku (
+    sku_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '物料ID',
+    sku_name VARCHAR(100) NOT NULL COMMENT '物料名称',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+
+    PRIMARY KEY (sku_id),
+    UNIQUE KEY uk_sku_name (sku_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物料主表 (SKU)';
+
+-- 插入初始物料数据
+INSERT INTO mrs_sku (sku_name) VALUES
+    ('香蕉'),
+    ('苹果'),
+    ('橙子'),
+    ('梨'),
+    ('葡萄')
+ON DUPLICATE KEY UPDATE sku_name = sku_name;
+
+-- =============================================
+-- 3. 包裹台账表 (核心表)
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS mrs_package_ledger (
+    package_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '包裹ID (系统唯一)',
+    sku_name VARCHAR(100) NOT NULL COMMENT '物料名称',
+    batch_code VARCHAR(50) NOT NULL COMMENT '批次号',
+    box_number VARCHAR(20) NOT NULL COMMENT '箱号',
+    spec_info VARCHAR(100) DEFAULT NULL COMMENT '规格备注 (如:20斤)',
+
+    status ENUM('in_stock', 'shipped', 'void') DEFAULT 'in_stock' COMMENT '状态: 在库/已出/损耗',
+    inbound_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+    outbound_time DATETIME NULL DEFAULT NULL COMMENT '出库时间',
+    void_reason VARCHAR(255) DEFAULT NULL COMMENT '损耗原因',
+
+    created_by VARCHAR(60) DEFAULT NULL COMMENT '创建人',
+    updated_by VARCHAR(60) DEFAULT NULL COMMENT '更新人',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
+
+    PRIMARY KEY (package_id),
+    UNIQUE KEY uk_sku_batch_box (sku_name, batch_code, box_number) COMMENT '防止重复录入',
+    KEY idx_status (status) COMMENT '用于快速查询库存',
+    KEY idx_inbound_time (inbound_time) COMMENT '用于入库报表',
+    KEY idx_outbound_time (outbound_time) COMMENT '用于出库报表',
+    KEY idx_sku_name (sku_name) COMMENT '按物料查询'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='包裹台账表 (核心)';
+
+-- =============================================
+-- 索引说明
+-- =============================================
+
+-- idx_status: 用于快速查询库存 (WHERE status = 'in_stock')
+-- idx_inbound_time: 用于月度入库统计 (WHERE DATE_FORMAT(inbound_time, '%Y-%m') = '2025-11')
+-- idx_outbound_time: 用于月度出库统计 (WHERE DATE_FORMAT(outbound_time, '%Y-%m') = '2025-11')
+-- uk_sku_batch_box: 联合唯一索引,防止重复录入同一个包裹 (sku_name + batch_code + box_number)
+
+-- =============================================
+-- 示例数据 (可选)
+-- =============================================
+
+-- 示例: 入库 5 个香蕉包裹 (批次 A01)
+INSERT INTO mrs_package_ledger (sku_name, batch_code, box_number, spec_info, status, inbound_time, created_by)
+VALUES
+    ('香蕉', 'A01', '0001', '20斤', 'in_stock', NOW(), 'admin'),
+    ('香蕉', 'A01', '0002', '20斤', 'in_stock', NOW(), 'admin'),
+    ('香蕉', 'A01', '0003', '20斤', 'in_stock', NOW(), 'admin'),
+    ('香蕉', 'A01', '0004', '20斤', 'in_stock', NOW(), 'admin'),
+    ('香蕉', 'A01', '0005', '20斤', 'in_stock', NOW(), 'admin')
+ON DUPLICATE KEY UPDATE package_id = package_id;
+
+-- 示例: 出库 2 个包裹
+-- UPDATE mrs_package_ledger
+-- SET status = 'shipped', outbound_time = NOW(), updated_by = 'admin'
+-- WHERE package_id IN (1, 2);
+
+-- =============================================
+-- 常用查询示例
+-- =============================================
+
+-- 1. 查询当前库存汇总 (按物料分组)
+-- SELECT sku_name, COUNT(*) as total_boxes
+-- FROM mrs_package_ledger
+-- WHERE status = 'in_stock'
+-- GROUP BY sku_name
+-- ORDER BY sku_name ASC;
+
+-- 2. 查询某个物料的库存明细 (按 FIFO 排序)
+-- SELECT *, DATEDIFF(NOW(), inbound_time) as days_in_stock
+-- FROM mrs_package_ledger
+-- WHERE sku_name = '香蕉' AND status = 'in_stock'
+-- ORDER BY inbound_time ASC, batch_code ASC, box_number ASC;
+
+-- 3. 月度入库统计 (2025-12)
+-- SELECT sku_name, COUNT(*) as package_count, COUNT(DISTINCT batch_code) as batch_count
+-- FROM mrs_package_ledger
+-- WHERE DATE_FORMAT(inbound_time, '%Y-%m') = '2025-12'
+-- GROUP BY sku_name
+-- ORDER BY package_count DESC;
+
+-- 4. 月度出库统计 (2025-12)
+-- SELECT sku_name, COUNT(*) as package_count
+-- FROM mrs_package_ledger
+-- WHERE DATE_FORMAT(outbound_time, '%Y-%m') = '2025-12'
+--   AND status = 'shipped'
+-- GROUP BY sku_name
+-- ORDER BY package_count DESC;
+
+-- =============================================
+-- 数据库设计完成
+-- =============================================
