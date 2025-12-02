@@ -12,35 +12,14 @@ $batches = express_get_batches($pdo, 'all', 100);
 
 function render_batch_status(array $batch): array
 {
-    $status = $batch['status'] ?? 'inactive';
+    $status = trim($batch['status'] ?? 'inactive');
 
-    if ($status !== 'active') {
+    if ($status === 'closed') {
         return ['label' => '已关闭', 'class' => 'secondary'];
     }
 
-    $total_count = (int) ($batch['total_count'] ?? 0);
-    $verified_count = (int) ($batch['verified_count'] ?? 0);
-    $counted_count = (int) ($batch['counted_count'] ?? 0);
-    $adjusted_count = (int) ($batch['adjusted_count'] ?? 0);
-
-    if ($total_count === 0) {
-        return ['label' => '等待录入', 'class' => 'secondary'];
-    }
-
-    if ($verified_count === 0 && $counted_count === 0 && $adjusted_count === 0) {
-        return ['label' => '等待中', 'class' => 'waiting'];
-    }
-
-    if ($total_count === $counted_count) {
-        return ['label' => '清点完成', 'class' => 'info'];
-    }
-
-    if ($total_count === $verified_count && $verified_count !== $counted_count) {
-        return ['label' => '待清点', 'class' => 'info'];
-    }
-
-    if ($total_count > 0 && $total_count > $verified_count) {
-        return ['label' => '进行中', 'class' => 'success'];
+    if ($status !== 'active') {
+        return ['label' => '未知状态', 'class' => 'secondary'];
     }
 
     return ['label' => '进行中', 'class' => 'success'];
