@@ -40,6 +40,13 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 
+// Session config (shared with MRS)
+if (!defined('SHARED_SESSION_NAME')) {
+    define('SHARED_SESSION_NAME', getenv('SHARED_SESSION_NAME') ?: 'MRS_SESSION');
+}
+
+define('EXPRESS_SESSION_NAME', SHARED_SESSION_NAME);
+
 if (!is_dir(EXPRESS_LOG_PATH)) {
     mkdir(EXPRESS_LOG_PATH, 0755, true);
 }
@@ -194,9 +201,16 @@ function express_get_json_input() {
 function express_start_secure_session() {
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.cookie_httponly', 1);
+        ini_set('session.use_only_cookies', 1);
+        ini_set('session.cookie_secure', 0); // 与 MRS 会话一致
         ini_set('session.use_strict_mode', 1);
         ini_set('session.cookie_samesite', 'Lax');
-        session_name('EXPRESS_SESSION');
+        session_name(EXPRESS_SESSION_NAME);
         session_start();
+
+        if (!isset($_SESSION['initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['initiated'] = true;
+        }
     }
 }

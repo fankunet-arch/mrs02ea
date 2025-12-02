@@ -25,8 +25,12 @@ define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
 define('MRS_VIEW_PATH', MRS_APP_PATH . '/views');
 define('MRS_API_PATH', MRS_APP_PATH . '/api');
 
-// 会话配置
-define('MRS_SESSION_NAME', 'MRS_SESSION');
+// 会话配置（与 Express 共享）
+if (!defined('SHARED_SESSION_NAME')) {
+    define('SHARED_SESSION_NAME', getenv('SHARED_SESSION_NAME') ?: 'MRS_SESSION');
+}
+
+define('MRS_SESSION_NAME', SHARED_SESSION_NAME);
 define('MRS_SESSION_TIMEOUT', 1800); // 30分钟
 
 /**
@@ -73,8 +77,15 @@ function mrs_start_secure_session() {
         ini_set('session.cookie_httponly', 1);
         ini_set('session.use_only_cookies', 1);
         ini_set('session.cookie_secure', 0); // 本地测试设为0
+        ini_set('session.use_strict_mode', 1);
+        ini_set('session.cookie_samesite', 'Lax');
         session_name(MRS_SESSION_NAME);
         session_start();
+
+        if (!isset($_SESSION['initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['initiated'] = true;
+        }
     }
 }
 
