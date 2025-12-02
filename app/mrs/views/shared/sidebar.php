@@ -37,6 +37,9 @@ $current_action = $_GET['action'] ?? 'inventory_list';
            class="nav-link <?= $current_action === 'reports' ? 'active' : '' ?>">
             统计报表
         </a>
+        <a href="/express/exp/" class="nav-link">
+            转Express系统
+        </a>
         <a href="/mrs/ap/index.php?action=logout" class="nav-link">
             退出登录
         </a>

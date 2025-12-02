@@ -31,7 +31,7 @@ $current_action = $_GET['action'] ?? 'batch_list';
             <span class="nav-icon" aria-hidden="true">🧾</span>
             <span>前台操作页面</span>
         </a>
-        <a href="/mrs/be/index.php?action=dashboard" class="nav-link">
+        <a href="/mrs/ap/" class="nav-link">
             <span class="nav-icon" aria-hidden="true">🔄</span>
             <span>转MRS系统</span>
         </a>
