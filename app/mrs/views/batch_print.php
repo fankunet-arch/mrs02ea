@@ -97,7 +97,7 @@ function mrs_tracking_tail($tracking_number)
         }
 
         .label-title {
-            font-size: 40pt;
+            font-size: 46pt;
             font-weight: 800;
             text-align: center;
             line-height: 1.1;
@@ -111,7 +111,7 @@ function mrs_tracking_tail($tracking_number)
             align-items: center;
             flex-wrap: wrap;
             gap: 2mm 4mm;
-            font-size: clamp(18pt, 3vw, 22pt);
+            font-size: clamp(20pt, 3.8vw, 28pt);
             font-weight: 700;
             line-height: 1.2;
         }
@@ -249,13 +249,26 @@ function mrs_tracking_tail($tracking_number)
         (function adjustTitleSizes() {
             const titles = document.querySelectorAll('.label-title');
             titles.forEach(title => {
-                let size = 40;
-                const minSize = 18;
+                let size = 46;
+                const minSize = 20;
+                const maxSize = 46;
                 title.style.fontSize = `${size}pt`;
 
                 while (title.scrollWidth > title.clientWidth && size > minSize) {
                     size -= 1;
                     title.style.fontSize = `${size}pt`;
+                }
+
+                if (title.scrollWidth === title.clientWidth && size < maxSize) {
+                    while (title.scrollWidth === title.clientWidth && size < maxSize) {
+                        size += 1;
+                        title.style.fontSize = `${size}pt`;
+                        if (title.scrollWidth > title.clientWidth) {
+                            size -= 1;
+                            title.style.fontSize = `${size}pt`;
+                            break;
+                        }
+                    }
                 }
             });
         })();
