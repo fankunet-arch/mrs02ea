@@ -25,9 +25,11 @@ define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
 define('MRS_VIEW_PATH', MRS_APP_PATH . '/views');
 define('MRS_API_PATH', MRS_APP_PATH . '/api');
 
-// 会话配置
-define('MRS_SESSION_NAME', 'MRS_SESSION');
+// 会话配置（与 Express 保持一致）
+// Express 默认使用 PHP 的默认会话名，直接复用即可
+define('MRS_SESSION_NAME', ini_get('session.name') ?: 'PHPSESSID');
 define('MRS_SESSION_TIMEOUT', 1800); // 30分钟
+define('MRS_SESSION_SAMESITE', 'Strict');
 
 /**
  * 获取数据库连接
@@ -70,11 +72,31 @@ function get_mrs_db_connection() {
  */
 function mrs_start_secure_session() {
     if (session_status() === PHP_SESSION_NONE) {
+        // 参考 Express 的默认设置，仅调整必要参数
+        $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+
         ini_set('session.cookie_httponly', 1);
-        ini_set('session.use_only_cookies', 1);
-        ini_set('session.cookie_secure', 0); // 本地测试设为0
+        ini_set('session.cookie_secure', $is_https ? 1 : 0);
+        ini_set('session.use_strict_mode', 1);
+        ini_set('session.cookie_samesite', MRS_SESSION_SAMESITE);
+
+        $params = session_get_cookie_params();
         session_name(MRS_SESSION_NAME);
+        session_set_cookie_params([
+            'lifetime' => $params['lifetime'],
+            'path' => $params['path'],
+            'domain' => $params['domain'],
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => MRS_SESSION_SAMESITE,
+        ]);
+
         session_start();
+
+        if (!isset($_SESSION['initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['initiated'] = true;
+        }
     }
 }
 
