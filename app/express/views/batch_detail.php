@@ -71,6 +71,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
 
     <div class="main-content">
+        <!-- 版本标记: 2024-12-02 自定义包裹功能已添加 -->
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
@@ -149,6 +150,26 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     <button type="submit" class="btn btn-primary">批量导入</button>
                 </form>
                 <div id="import-message" class="message" style="display: none; margin-top: 15px;"></div>
+            </div>
+
+            <!-- 添加自定义包裹区域 -->
+            <div class="bulk-import-section" style="margin-top: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 5px; border: 2px dashed #28a745;">
+                <h2 style="color: #28a745;">📦 添加自定义包裹（拆分箱子功能）</h2>
+                <p class="form-text" style="margin-bottom: 15px; color: #666;">
+                    用于添加拆分后的箱子。系统会自动生成虚拟快递单号（格式：CUSTOM-批次ID-序号），您可以打印标签并贴在箱子上。
+                </p>
+                <form id="custom-package-form">
+                    <div class="form-group">
+                        <label for="custom_count">要添加的箱子数量:</label>
+                        <input type="number" id="custom_count" class="form-control"
+                               min="1" max="100" value="1" style="width: 200px;">
+                        <small class="form-text">
+                            一次最多添加100个自定义包裹
+                        </small>
+                    </div>
+                    <button type="submit" class="btn btn-success">添加自定义包裹</button>
+                </form>
+                <div id="custom-message" class="message" style="display: none; margin-top: 15px;"></div>
             </div>
 
             <!-- 包裹列表 -->
@@ -246,6 +267,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     </div>
 
     <script>
+        // 批量导入快递单号
         document.getElementById('bulk-import-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -291,6 +313,73 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 } else {
                     messageDiv.className = 'message error';
                     messageDiv.textContent = data.message || '导入失败';
+                    messageDiv.style.display = 'block';
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '网络错误：' + error.message;
+                messageDiv.style.display = 'block';
+            }
+        });
+
+        // 添加自定义包裹
+        document.getElementById('custom-package-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const count = parseInt(document.getElementById('custom_count').value);
+            const messageDiv = document.getElementById('custom-message');
+
+            if (!count || count < 1 || count > 100) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '数量必须在1-100之间';
+                messageDiv.style.display = 'block';
+                return;
+            }
+
+            // 确认操作
+            if (!confirm(`确定要添加 ${count} 个自定义包裹吗？\n系统将自动生成虚拟快递单号。`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/express/exp/index.php?action=create_custom_packages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        batch_id: <?= $batch_id ?>,
+                        count: count
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let msg = `成功添加 ${data.data.created.length} 个自定义包裹！`;
+                    if (data.data.errors.length > 0) {
+                        msg += ` 失败: ${data.data.errors.length} 个`;
+                    }
+
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = msg;
+                    messageDiv.style.display = 'block';
+
+                    // 显示生成的编号
+                    if (data.data.created.length > 0) {
+                        const numbers = data.data.created.map(p => p.tracking_number).join(', ');
+                        const detailDiv = document.createElement('div');
+                        detailDiv.style.marginTop = '10px';
+                        detailDiv.innerHTML = `<strong>生成的编号:</strong><br>${numbers}`;
+                        messageDiv.appendChild(detailDiv);
+                    }
+
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = data.message || '添加失败';
                     messageDiv.style.display = 'block';
                 }
             } catch (error) {
