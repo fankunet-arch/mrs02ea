@@ -85,7 +85,7 @@ if (isset($_GET['error'])) {
                     </div>
 
                     <div class="system-info">
-                        共享 Express 系统用户数据库
+                        
                     </div>
                 </form>
 
