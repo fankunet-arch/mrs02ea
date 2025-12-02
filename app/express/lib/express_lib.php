@@ -161,6 +161,25 @@ function express_get_batches($pdo, $status = 'all', $limit = 100) {
 }
 
 /**
+ * 渲染批次状态标签
+ * @param array $batch
+ * @return array{label: string, class: string}
+ */
+function express_render_batch_status(array $batch): array {
+    $status = trim($batch['status'] ?? 'inactive');
+
+    if ($status === 'closed') {
+        return ['label' => '已关闭', 'class' => 'secondary'];
+    }
+
+    if ($status !== 'active') {
+        return ['label' => '未知状态', 'class' => 'secondary'];
+    }
+
+    return ['label' => '进行中', 'class' => 'success'];
+}
+
+/**
  * 根据批次ID获取批次详情
  * @param PDO $pdo
  * @param int $batch_id

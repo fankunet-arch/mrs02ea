@@ -9,21 +9,6 @@ if (!defined('EXPRESS_ENTRY')) {
 }
 
 $batches = express_get_batches($pdo, 'all', 100);
-
-function render_batch_status(array $batch): array
-{
-    $status = trim($batch['status'] ?? 'inactive');
-
-    if ($status === 'closed') {
-        return ['label' => '已关闭', 'class' => 'secondary'];
-    }
-
-    if ($status !== 'active') {
-        return ['label' => '未知状态', 'class' => 'secondary'];
-    }
-
-    return ['label' => '进行中', 'class' => 'success'];
-}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -67,7 +52,7 @@ function render_batch_status(array $batch): array
                         </tr>
                     <?php else: ?>
                         <?php foreach ($batches as $batch): ?>
-                            <?php $status_info = render_batch_status($batch); ?>
+                            <?php $status_info = express_render_batch_status($batch); ?>
                             <tr>
                                 <td><?= $batch['batch_id'] ?></td>
                                 <td><?= htmlspecialchars($batch['batch_name']) ?></td>
