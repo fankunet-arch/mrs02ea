@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-01 22:56:21
+-- 生成日期： 2025-12-02 01:01:13
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -92,32 +92,22 @@ CREATE TABLE `express_package` (
 
 DROP TABLE IF EXISTS `mrs_package_ledger`;
 CREATE TABLE `mrs_package_ledger` (
-  `package_id` bigint UNSIGNED NOT NULL COMMENT '包裹ID (系统唯一)',
-  `sku_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '物料名称',
-  `batch_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '批次号',
+  `ledger_id` bigint UNSIGNED NOT NULL COMMENT '台账ID (主键)',
+  `batch_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '批次名称',
+  `tracking_number` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '快递单号',
+  `content_note` text COLLATE utf8mb4_unicode_ci COMMENT '内容备注',
   `box_number` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '箱号',
-  `spec_info` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格备注 (如:20斤)',
-  `status` enum('in_stock','shipped','void') COLLATE utf8mb4_unicode_ci DEFAULT 'in_stock' COMMENT '状态: 在库/已出/损耗',
-  `inbound_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+  `warehouse_location` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库位置',
+  `spec_info` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格备注',
+  `status` enum('in_stock','shipped','void') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'in_stock' COMMENT '状态',
+  `inbound_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
   `outbound_time` datetime DEFAULT NULL COMMENT '出库时间',
   `void_reason` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '损耗原因',
   `created_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
   `updated_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '更新人',
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='包裹台账表 (核心)';
-
--- --------------------------------------------------------
-
---
--- 表的结构 `mrs_sku`
---
-
-DROP TABLE IF EXISTS `mrs_sku`;
-CREATE TABLE `mrs_sku` (
-  `sku_id` bigint UNSIGNED NOT NULL COMMENT '物料ID',
-  `sku_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '物料名称',
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物料主表 (SKU)';
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS 包裹台账表';
 
 -- --------------------------------------------------------
 
@@ -175,19 +165,14 @@ ALTER TABLE `express_package`
 -- 表的索引 `mrs_package_ledger`
 --
 ALTER TABLE `mrs_package_ledger`
-  ADD PRIMARY KEY (`package_id`),
-  ADD UNIQUE KEY `uk_sku_batch_box` (`sku_name`,`batch_code`,`box_number`) COMMENT '防止重复录入',
-  ADD KEY `idx_status` (`status`) COMMENT '用于快速查询库存',
-  ADD KEY `idx_inbound_time` (`inbound_time`) COMMENT '用于入库报表',
-  ADD KEY `idx_outbound_time` (`outbound_time`) COMMENT '用于出库报表',
-  ADD KEY `idx_sku_name` (`sku_name`) COMMENT '按物料查询';
-
---
--- 表的索引 `mrs_sku`
---
-ALTER TABLE `mrs_sku`
-  ADD PRIMARY KEY (`sku_id`),
-  ADD UNIQUE KEY `uk_sku_name` (`sku_name`);
+  ADD PRIMARY KEY (`ledger_id`),
+  ADD UNIQUE KEY `uk_batch_tracking` (`batch_name`,`tracking_number`),
+  ADD UNIQUE KEY `uk_batch_box` (`batch_name`,`box_number`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_content_note` (`content_note`(50)),
+  ADD KEY `idx_batch_name` (`batch_name`),
+  ADD KEY `idx_inbound_time` (`inbound_time`),
+  ADD KEY `idx_outbound_time` (`outbound_time`);
 
 --
 -- 表的索引 `sys_users`
@@ -223,13 +208,7 @@ ALTER TABLE `express_package`
 -- 使用表AUTO_INCREMENT `mrs_package_ledger`
 --
 ALTER TABLE `mrs_package_ledger`
-  MODIFY `package_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '包裹ID (系统唯一)';
-
---
--- 使用表AUTO_INCREMENT `mrs_sku`
---
-ALTER TABLE `mrs_sku`
-  MODIFY `sku_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '物料ID';
+  MODIFY `ledger_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '台账ID (主键)';
 
 --
 -- 使用表AUTO_INCREMENT `sys_users`

@@ -8,15 +8,15 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
-$sku_name = $_GET['sku'] ?? '';
+$content_note = $_GET['sku'] ?? '';
 
-if (empty($sku_name)) {
+if (empty($content_note)) {
     header('Location: /mrs/ap/index.php?action=inventory_list');
     exit;
 }
 
 // 获取库存明细
-$packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
+$packages = mrs_get_inventory_detail($pdo, $content_note, 'fifo');
 ?>
 <!DOCTYPE html>
 <html lang="zh">
@@ -31,7 +31,7 @@ $packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
 
     <div class="main-content">
         <div class="page-header">
-            <h1>库存明细: <?= htmlspecialchars($sku_name) ?></h1>
+            <h1>库存明细: <?= htmlspecialchars($content_note) ?></h1>
             <div class="header-actions">
                 <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-secondary">返回</a>
             </div>
@@ -51,7 +51,8 @@ $packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>批次号</th>
+                            <th>批次名称</th>
+                            <th>快递单号</th>
                             <th>箱号</th>
                             <th>规格</th>
                             <th>入库时间</th>
@@ -63,7 +64,8 @@ $packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
                     <tbody>
                         <?php foreach ($packages as $pkg): ?>
                             <tr>
-                                <td><?= htmlspecialchars($pkg['batch_code']) ?></td>
+                                <td><?= htmlspecialchars($pkg['batch_name']) ?></td>
+                                <td><?= htmlspecialchars($pkg['tracking_number']) ?></td>
                                 <td><?= htmlspecialchars($pkg['box_number']) ?></td>
                                 <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
                                 <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
@@ -71,7 +73,7 @@ $packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
                                 <td><span class="badge badge-in-stock">在库</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-danger"
-                                            onclick="markVoid(<?= $pkg['package_id'] ?>)">标记损耗</button>
+                                            onclick="markVoid(<?= $pkg['ledger_id'] ?>)">标记损耗</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -82,7 +84,7 @@ $packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
     </div>
 
     <script>
-    function markVoid(packageId) {
+    function markVoid(ledgerId) {
         if (!confirm('确定要将此包裹标记为损耗/作废吗?')) {
             return;
         }
@@ -98,7 +100,7 @@ $packages = mrs_get_inventory_detail($pdo, $sku_name, 'fifo');
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                package_id: packageId,
+                ledger_id: ledgerId,
                 new_status: 'void',
                 reason: reason
             })

@@ -84,7 +84,8 @@ if (!empty($selected_sku)) {
                                 <th class="checkbox-cell">
                                     <input type="checkbox" id="checkAll" onchange="toggleAll(this)">
                                 </th>
-                                <th>批次号</th>
+                                <th>批次名称</th>
+                                <th>快递单号</th>
                                 <th>箱号</th>
                                 <th>规格</th>
                                 <th>入库时间</th>
@@ -95,11 +96,12 @@ if (!empty($selected_sku)) {
                             <?php foreach ($packages as $pkg): ?>
                                 <tr onclick="toggleRow(this)">
                                     <td class="checkbox-cell">
-                                        <input type="checkbox" name="package_ids[]"
-                                               value="<?= $pkg['package_id'] ?>"
+                                        <input type="checkbox" name="ledger_ids[]"
+                                               value="<?= $pkg['ledger_id'] ?>"
                                                onchange="updateCount()">
                                     </td>
-                                    <td><?= htmlspecialchars($pkg['batch_code']) ?></td>
+                                    <td><?= htmlspecialchars($pkg['batch_name']) ?></td>
+                                    <td><?= htmlspecialchars($pkg['tracking_number']) ?></td>
                                     <td><?= htmlspecialchars($pkg['box_number']) ?></td>
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
@@ -145,7 +147,7 @@ if (!empty($selected_sku)) {
     }
 
     function toggleAll(checkAll) {
-        const checkboxes = document.querySelectorAll('input[name="package_ids[]"]');
+        const checkboxes = document.querySelectorAll('input[name="ledger_ids[]"]');
         checkboxes.forEach(cb => {
             cb.checked = checkAll.checked;
             cb.closest('tr').classList.toggle('selected', checkAll.checked);
@@ -164,12 +166,12 @@ if (!empty($selected_sku)) {
     }
 
     function updateCount() {
-        const count = document.querySelectorAll('input[name="package_ids[]"]:checked').length;
+        const count = document.querySelectorAll('input[name="ledger_ids[]"]:checked').length;
         document.getElementById('selectedCount').textContent = count;
     }
 
     function submitOutbound() {
-        const selected = Array.from(document.querySelectorAll('input[name="package_ids[]"]:checked'))
+        const selected = Array.from(document.querySelectorAll('input[name="ledger_ids[]"]:checked'))
             .map(cb => cb.value);
 
         if (selected.length === 0) {
@@ -187,7 +189,7 @@ if (!empty($selected_sku)) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                package_ids: selected
+                ledger_ids: selected
             })
         })
         .then(response => response.json())

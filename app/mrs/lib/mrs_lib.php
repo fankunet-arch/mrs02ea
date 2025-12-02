@@ -124,57 +124,133 @@ function mrs_require_login() {
 }
 
 // ============================================
-// 物料(SKU)管理函数
+// Express 数据查询函数（只读，松耦合）
 // ============================================
 
 /**
- * 获取所有物料列表
- * @param PDO $pdo
+ * 获取 Express 数据库连接（只读）
+ * @return PDO
+ * @throws PDOException
+ */
+function get_express_db_connection() {
+    static $express_pdo = null;
+
+    if ($express_pdo !== null) {
+        return $express_pdo;
+    }
+
+    try {
+        // 使用与 Express 相同的数据库连接（注意：Express 和 MRS 共享同一个数据库）
+        $dsn = sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+            MRS_DB_HOST,
+            MRS_DB_PORT,
+            MRS_DB_NAME,
+            MRS_DB_CHARSET
+        );
+
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+
+        $express_pdo = new PDO($dsn, MRS_DB_USER, MRS_DB_PASS, $options);
+
+        return $express_pdo;
+    } catch (PDOException $e) {
+        mrs_log('Express Database connection error: ' . $e->getMessage(), 'ERROR');
+        throw $e;
+    }
+}
+
+/**
+ * 获取 Express 批次列表（只读查询）
  * @return array
  */
-function mrs_get_all_skus($pdo) {
+function mrs_get_express_batches() {
     try {
-        $stmt = $pdo->prepare("SELECT * FROM mrs_sku ORDER BY sku_name ASC");
+        $express_pdo = get_express_db_connection();
+
+        $stmt = $express_pdo->prepare("
+            SELECT
+                batch_id,
+                batch_name,
+                status,
+                total_count,
+                counted_count,
+                created_at
+            FROM express_batch
+            WHERE status IN ('counting', 'completed')
+            ORDER BY created_at DESC
+            LIMIT 100
+        ");
+
         $stmt->execute();
         return $stmt->fetchAll();
     } catch (PDOException $e) {
-        mrs_log('Failed to get SKUs: ' . $e->getMessage(), 'ERROR');
+        mrs_log('Failed to get Express batches: ' . $e->getMessage(), 'ERROR');
         return [];
     }
 }
 
 /**
- * 根据名称搜索物料
- * @param PDO $pdo
- * @param string $keyword
+ * 获取 Express 批次中已清点的包裹（排除已入库的）
+ * @param PDO $mrs_pdo MRS 数据库连接
+ * @param string $batch_name 批次名称
  * @return array
  */
-function mrs_search_sku($pdo, $keyword) {
+function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
     try {
-        $stmt = $pdo->prepare("SELECT * FROM mrs_sku WHERE sku_name LIKE :keyword ORDER BY sku_name ASC");
-        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
-        $stmt->execute();
-        return $stmt->fetchAll();
-    } catch (PDOException $e) {
-        mrs_log('Failed to search SKU: ' . $e->getMessage(), 'ERROR');
-        return [];
-    }
-}
+        $express_pdo = get_express_db_connection();
 
-/**
- * 创建新物料
- * @param PDO $pdo
- * @param string $sku_name
- * @return int|false
- */
-function mrs_create_sku($pdo, $sku_name) {
-    try {
-        $stmt = $pdo->prepare("INSERT INTO mrs_sku (sku_name) VALUES (:sku_name)");
-        $stmt->execute(['sku_name' => trim($sku_name)]);
-        return $pdo->lastInsertId();
+        // 查询 Express 中已清点的包裹
+        $stmt = $express_pdo->prepare("
+            SELECT
+                b.batch_name,
+                p.tracking_number,
+                p.content_note,
+                p.package_status,
+                p.counted_at
+            FROM express_package p
+            INNER JOIN express_batch b ON p.batch_id = b.batch_id
+            WHERE b.batch_name = :batch_name
+              AND p.package_status IN ('counted', 'adjusted')
+              AND p.content_note IS NOT NULL
+              AND p.content_note != ''
+            ORDER BY p.tracking_number ASC
+        ");
+
+        $stmt->execute(['batch_name' => $batch_name]);
+        $express_packages = $stmt->fetchAll();
+
+        // 过滤掉已入库的包裹
+        $available_packages = [];
+
+        foreach ($express_packages as $pkg) {
+            // 检查是否已入库
+            $check_stmt = $mrs_pdo->prepare("
+                SELECT 1 FROM mrs_package_ledger
+                WHERE batch_name = :batch_name
+                  AND tracking_number = :tracking_number
+                LIMIT 1
+            ");
+
+            $check_stmt->execute([
+                'batch_name' => $pkg['batch_name'],
+                'tracking_number' => $pkg['tracking_number']
+            ]);
+
+            // 如果不存在，则可入库
+            if (!$check_stmt->fetch()) {
+                $available_packages[] = $pkg;
+            }
+        }
+
+        return $available_packages;
     } catch (PDOException $e) {
-        mrs_log('Failed to create SKU: ' . $e->getMessage(), 'ERROR');
-        return false;
+        mrs_log('Failed to get Express counted packages: ' . $e->getMessage(), 'ERROR');
+        return [];
     }
 }
 
@@ -183,51 +259,95 @@ function mrs_create_sku($pdo, $sku_name) {
 // ============================================
 
 /**
- * 创建入库记录 (批量)
+ * 获取批次中下一个可用的箱号
  * @param PDO $pdo
- * @param string $sku_name 物料名称
- * @param string $batch_code 批次号
- * @param array $box_numbers 箱号数组 ['0001', '0002', ...]
- * @param string $spec_info 规格信息
+ * @param string $batch_name
+ * @return string 4位箱号，如 '0001'
+ */
+function mrs_get_next_box_number($pdo, $batch_name) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT box_number
+            FROM mrs_package_ledger
+            WHERE batch_name = :batch_name
+            ORDER BY box_number DESC
+            LIMIT 1
+        ");
+
+        $stmt->execute(['batch_name' => $batch_name]);
+        $last_box = $stmt->fetch();
+
+        if (!$last_box) {
+            return '0001';
+        }
+
+        $last_number = intval($last_box['box_number']);
+        $next_number = $last_number + 1;
+
+        return str_pad($next_number, 4, '0', STR_PAD_LEFT);
+    } catch (PDOException $e) {
+        mrs_log('Failed to get next box number: ' . $e->getMessage(), 'ERROR');
+        return '0001';
+    }
+}
+
+/**
+ * 创建入库记录（批量，从 Express 包裹）
+ * @param PDO $pdo
+ * @param array $packages 包裹数组，每个元素包含: batch_name, tracking_number, content_note
+ * @param string $spec_info 规格信息（可选）
  * @param string $operator 操作员
  * @return array ['success' => bool, 'created' => int, 'errors' => array]
  */
-function mrs_inbound_packages($pdo, $sku_name, $batch_code, $box_numbers, $spec_info = '', $operator = '') {
+function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') {
     $created = 0;
     $errors = [];
 
     try {
         $pdo->beginTransaction();
 
-        foreach ($box_numbers as $box_number) {
+        foreach ($packages as $pkg) {
             try {
+                $batch_name = $pkg['batch_name'];
+                $tracking_number = $pkg['tracking_number'];
+                $content_note = $pkg['content_note'];
+
+                // 自动生成箱号
+                $box_number = mrs_get_next_box_number($pdo, $batch_name);
+
                 $stmt = $pdo->prepare("
                     INSERT INTO mrs_package_ledger
-                    (sku_name, batch_code, box_number, spec_info, status, inbound_time, created_by)
-                    VALUES (:sku_name, :batch_code, :box_number, :spec_info, 'in_stock', NOW(), :operator)
+                    (batch_name, tracking_number, content_note, box_number, spec_info,
+                     status, inbound_time, created_by)
+                    VALUES (:batch_name, :tracking_number, :content_note, :box_number, :spec_info,
+                            'in_stock', NOW(), :operator)
                 ");
 
                 $stmt->execute([
-                    'sku_name' => trim($sku_name),
-                    'batch_code' => trim($batch_code),
-                    'box_number' => trim($box_number),
+                    'batch_name' => trim($batch_name),
+                    'tracking_number' => trim($tracking_number),
+                    'content_note' => trim($content_note),
+                    'box_number' => $box_number,
                     'spec_info' => trim($spec_info),
                     'operator' => $operator
                 ]);
 
                 $created++;
+
+                mrs_log("Package inbound: batch={$batch_name}, tracking={$tracking_number}, box={$box_number}", 'INFO');
+
             } catch (PDOException $e) {
                 if ($e->getCode() == 23000) {
-                    $errors[] = "箱号 {$box_number} 已存在";
+                    $errors[] = "快递单号 {$tracking_number} 已入库";
                 } else {
-                    $errors[] = "箱号 {$box_number} 创建失败: " . $e->getMessage();
+                    $errors[] = "快递单号 {$tracking_number} 入库失败: " . $e->getMessage();
                 }
             }
         }
 
         $pdo->commit();
 
-        mrs_log("Inbound completed: created=$created, errors=" . count($errors), 'INFO');
+        mrs_log("Inbound batch completed: created=$created, errors=" . count($errors), 'INFO');
 
         return [
             'success' => true,
@@ -240,6 +360,7 @@ function mrs_inbound_packages($pdo, $sku_name, $batch_code, $box_numbers, $spec_
         mrs_log('Failed to inbound packages: ' . $e->getMessage(), 'ERROR');
         return [
             'success' => false,
+            'created' => 0,
             'message' => '入库失败: ' . $e->getMessage()
         ];
     }
@@ -248,29 +369,29 @@ function mrs_inbound_packages($pdo, $sku_name, $batch_code, $box_numbers, $spec_
 /**
  * 获取可用库存 (按物料分组)
  * @param PDO $pdo
- * @param string $sku_name 可选,筛选特定物料
+ * @param string $content_note 可选,筛选特定物料
  * @return array
  */
-function mrs_get_inventory_summary($pdo, $sku_name = '') {
+function mrs_get_inventory_summary($pdo, $content_note = '') {
     try {
         $sql = "
             SELECT
-                sku_name,
+                content_note AS sku_name,
                 COUNT(*) as total_boxes
             FROM mrs_package_ledger
             WHERE status = 'in_stock'
         ";
 
-        if (!empty($sku_name)) {
-            $sql .= " AND sku_name = :sku_name";
+        if (!empty($content_note)) {
+            $sql .= " AND content_note = :content_note";
         }
 
-        $sql .= " GROUP BY sku_name ORDER BY sku_name ASC";
+        $sql .= " GROUP BY content_note ORDER BY content_note ASC";
 
         $stmt = $pdo->prepare($sql);
 
-        if (!empty($sku_name)) {
-            $stmt->bindValue(':sku_name', $sku_name, PDO::PARAM_STR);
+        if (!empty($content_note)) {
+            $stmt->bindValue(':content_note', $content_note, PDO::PARAM_STR);
         }
 
         $stmt->execute();
@@ -284,27 +405,36 @@ function mrs_get_inventory_summary($pdo, $sku_name = '') {
 /**
  * 获取库存明细 (某个物料的所有在库包裹)
  * @param PDO $pdo
- * @param string $sku_name
+ * @param string $content_note 物料名称（content_note）
  * @param string $order_by 排序方式: 'fifo' (先进先出), 'batch' (按批次)
  * @return array
  */
-function mrs_get_inventory_detail($pdo, $sku_name, $order_by = 'fifo') {
+function mrs_get_inventory_detail($pdo, $content_note, $order_by = 'fifo') {
     try {
         $sql = "
-            SELECT *,
-                   DATEDIFF(NOW(), inbound_time) as days_in_stock
+            SELECT
+                ledger_id,
+                batch_name,
+                tracking_number,
+                content_note AS sku_name,
+                box_number,
+                spec_info,
+                warehouse_location,
+                status,
+                inbound_time,
+                DATEDIFF(NOW(), inbound_time) as days_in_stock
             FROM mrs_package_ledger
-            WHERE sku_name = :sku_name AND status = 'in_stock'
+            WHERE content_note = :content_note AND status = 'in_stock'
         ";
 
         if ($order_by === 'fifo') {
-            $sql .= " ORDER BY inbound_time ASC, batch_code ASC, box_number ASC";
+            $sql .= " ORDER BY inbound_time ASC, batch_name ASC, box_number ASC";
         } else {
-            $sql .= " ORDER BY batch_code ASC, box_number ASC";
+            $sql .= " ORDER BY batch_name ASC, box_number ASC";
         }
 
         $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':sku_name', $sku_name, PDO::PARAM_STR);
+        $stmt->bindValue(':content_note', $content_note, PDO::PARAM_STR);
         $stmt->execute();
 
         return $stmt->fetchAll();
@@ -317,26 +447,26 @@ function mrs_get_inventory_detail($pdo, $sku_name, $order_by = 'fifo') {
 /**
  * 出库操作 (批量)
  * @param PDO $pdo
- * @param array $package_ids 要出库的包裹ID数组
+ * @param array $ledger_ids 要出库的台账ID数组
  * @param string $operator 操作员
  * @return array ['success' => bool, 'shipped' => int, 'message' => string]
  */
-function mrs_outbound_packages($pdo, $package_ids, $operator = '') {
+function mrs_outbound_packages($pdo, $ledger_ids, $operator = '') {
     try {
         $pdo->beginTransaction();
 
-        $placeholders = implode(',', array_fill(0, count($package_ids), '?'));
+        $placeholders = implode(',', array_fill(0, count($ledger_ids), '?'));
 
         $stmt = $pdo->prepare("
             UPDATE mrs_package_ledger
             SET status = 'shipped',
                 outbound_time = NOW(),
                 updated_by = ?
-            WHERE package_id IN ($placeholders)
+            WHERE ledger_id IN ($placeholders)
               AND status = 'in_stock'
         ");
 
-        $params = array_merge([$operator], $package_ids);
+        $params = array_merge([$operator], $ledger_ids);
         $stmt->execute($params);
 
         $shipped = $stmt->rowCount();
@@ -365,13 +495,13 @@ function mrs_outbound_packages($pdo, $package_ids, $operator = '') {
 /**
  * 状态变更 (损耗/作废)
  * @param PDO $pdo
- * @param int $package_id
+ * @param int $ledger_id 台账ID
  * @param string $new_status 'void' (损耗)
  * @param string $reason 原因
  * @param string $operator
  * @return array
  */
-function mrs_change_status($pdo, $package_id, $new_status, $reason = '', $operator = '') {
+function mrs_change_status($pdo, $ledger_id, $new_status, $reason = '', $operator = '') {
     try {
         $pdo->beginTransaction();
 
@@ -381,19 +511,19 @@ function mrs_change_status($pdo, $package_id, $new_status, $reason = '', $operat
                 void_reason = :reason,
                 updated_by = :operator,
                 outbound_time = NOW()
-            WHERE package_id = :package_id
+            WHERE ledger_id = :ledger_id
         ");
 
         $stmt->execute([
             'new_status' => $new_status,
             'reason' => $reason,
             'operator' => $operator,
-            'package_id' => $package_id
+            'ledger_id' => $ledger_id
         ]);
 
         $pdo->commit();
 
-        mrs_log("Status changed: package_id=$package_id, new_status=$new_status", 'INFO');
+        mrs_log("Status changed: ledger_id=$ledger_id, new_status=$new_status", 'INFO');
 
         return [
             'success' => true,
@@ -424,12 +554,12 @@ function mrs_get_monthly_inbound($pdo, $month) {
     try {
         $stmt = $pdo->prepare("
             SELECT
-                sku_name,
+                content_note AS sku_name,
                 COUNT(*) as package_count,
-                COUNT(DISTINCT batch_code) as batch_count
+                COUNT(DISTINCT batch_name) as batch_count
             FROM mrs_package_ledger
             WHERE DATE_FORMAT(inbound_time, '%Y-%m') = :month
-            GROUP BY sku_name
+            GROUP BY content_note
             ORDER BY package_count DESC
         ");
 
@@ -453,12 +583,12 @@ function mrs_get_monthly_outbound($pdo, $month) {
     try {
         $stmt = $pdo->prepare("
             SELECT
-                sku_name,
+                content_note AS sku_name,
                 COUNT(*) as package_count
             FROM mrs_package_ledger
             WHERE DATE_FORMAT(outbound_time, '%Y-%m') = :month
               AND status = 'shipped'
-            GROUP BY sku_name
+            GROUP BY content_note
             ORDER BY package_count DESC
         ");
 
@@ -513,13 +643,13 @@ function mrs_get_monthly_summary($pdo, $month) {
 /**
  * 获取包裹详情
  * @param PDO $pdo
- * @param int $package_id
+ * @param int $ledger_id 台账ID
  * @return array|null
  */
-function mrs_get_package_by_id($pdo, $package_id) {
+function mrs_get_package_by_id($pdo, $ledger_id) {
     try {
-        $stmt = $pdo->prepare("SELECT * FROM mrs_package_ledger WHERE package_id = :package_id");
-        $stmt->execute(['package_id' => $package_id]);
+        $stmt = $pdo->prepare("SELECT * FROM mrs_package_ledger WHERE ledger_id = :ledger_id");
+        $stmt->execute(['ledger_id' => $ledger_id]);
         return $stmt->fetch();
     } catch (PDOException $e) {
         mrs_log('Failed to get package: ' . $e->getMessage(), 'ERROR');
@@ -530,29 +660,35 @@ function mrs_get_package_by_id($pdo, $package_id) {
 /**
  * 搜索包裹
  * @param PDO $pdo
- * @param string $sku_name
- * @param string $batch_code
- * @param string $box_number
+ * @param string $content_note 物料名称
+ * @param string $batch_name 批次名称
+ * @param string $box_number 箱号
+ * @param string $tracking_number 快递单号
  * @return array
  */
-function mrs_search_packages($pdo, $sku_name = '', $batch_code = '', $box_number = '') {
+function mrs_search_packages($pdo, $content_note = '', $batch_name = '', $box_number = '', $tracking_number = '') {
     try {
         $sql = "SELECT * FROM mrs_package_ledger WHERE 1=1";
         $params = [];
 
-        if (!empty($sku_name)) {
-            $sql .= " AND sku_name = :sku_name";
-            $params['sku_name'] = $sku_name;
+        if (!empty($content_note)) {
+            $sql .= " AND content_note = :content_note";
+            $params['content_note'] = $content_note;
         }
 
-        if (!empty($batch_code)) {
-            $sql .= " AND batch_code LIKE :batch_code";
-            $params['batch_code'] = '%' . $batch_code . '%';
+        if (!empty($batch_name)) {
+            $sql .= " AND batch_name LIKE :batch_name";
+            $params['batch_name'] = '%' . $batch_name . '%';
         }
 
         if (!empty($box_number)) {
             $sql .= " AND box_number LIKE :box_number";
             $params['box_number'] = '%' . $box_number . '%';
+        }
+
+        if (!empty($tracking_number)) {
+            $sql .= " AND tracking_number LIKE :tracking_number";
+            $params['tracking_number'] = '%' . $tracking_number . '%';
         }
 
         $sql .= " ORDER BY inbound_time DESC LIMIT 100";

@@ -17,12 +17,12 @@ if (!$input) {
     $input = $_POST;
 }
 
-$package_id = (int)($input['package_id'] ?? 0);
+$ledger_id = (int)($input['ledger_id'] ?? 0);
 $new_status = trim($input['new_status'] ?? '');
 $reason = trim($input['reason'] ?? '');
 
-if ($package_id <= 0) {
-    mrs_json_response(false, null, '包裹ID无效');
+if ($ledger_id <= 0) {
+    mrs_json_response(false, null, '台账ID无效');
 }
 
 if (!in_array($new_status, ['void'])) {
@@ -33,7 +33,7 @@ if (!in_array($new_status, ['void'])) {
 $operator = $_SESSION['user_login'] ?? 'system';
 
 // 执行状态变更
-$result = mrs_change_status($pdo, $package_id, $new_status, $reason, $operator);
+$result = mrs_change_status($pdo, $ledger_id, $new_status, $reason, $operator);
 
 if ($result['success']) {
     mrs_json_response(true, null, $result['message']);

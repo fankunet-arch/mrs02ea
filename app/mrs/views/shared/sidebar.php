@@ -33,10 +33,6 @@ $current_action = $_GET['action'] ?? 'inventory_list';
            class="nav-link <?= $current_action === 'reports' ? 'active' : '' ?>">
             统计报表
         </a>
-        <a href="/mrs/ap/index.php?action=sku_manage"
-           class="nav-link <?= $current_action === 'sku_manage' ? 'active' : '' ?>">
-            物料管理
-        </a>
         <a href="/mrs/ap/index.php?action=logout" class="nav-link">
             退出登录
         </a>

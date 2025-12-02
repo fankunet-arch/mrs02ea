@@ -17,9 +17,9 @@ if (!$input) {
     $input = $_POST;
 }
 
-$package_ids = $input['package_ids'] ?? [];
+$ledger_ids = $input['ledger_ids'] ?? [];
 
-if (empty($package_ids) || !is_array($package_ids)) {
+if (empty($ledger_ids) || !is_array($ledger_ids)) {
     mrs_json_response(false, null, '请选择要出库的包裹');
 }
 
@@ -27,7 +27,7 @@ if (empty($package_ids) || !is_array($package_ids)) {
 $operator = $_SESSION['user_login'] ?? 'system';
 
 // 执行出库
-$result = mrs_outbound_packages($pdo, $package_ids, $operator);
+$result = mrs_outbound_packages($pdo, $ledger_ids, $operator);
 
 if ($result['success']) {
     mrs_json_response(true, null, $result['message']);
