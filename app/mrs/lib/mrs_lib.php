@@ -751,7 +751,19 @@ function mrs_search_packages($pdo, $content_note = '', $batch_name = '', $box_nu
  */
 function mrs_search_instock_packages($pdo, $search_type, $search_value) {
     try {
-        $sql = "SELECT * FROM mrs_package_ledger WHERE status = 'in_stock'";
+        $sql = "SELECT
+                    ledger_id,
+                    batch_name,
+                    tracking_number,
+                    content_note,
+                    box_number,
+                    spec_info,
+                    warehouse_location,
+                    status,
+                    inbound_time,
+                    DATEDIFF(NOW(), inbound_time) as days_in_stock
+                FROM mrs_package_ledger
+                WHERE status = 'in_stock'";
         $params = [];
 
         if (!empty($search_value)) {
