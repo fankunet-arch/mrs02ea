@@ -11,10 +11,20 @@ if (!defined('MRS_ENTRY')) {
 // 获取库存汇总供选择
 $inventory = mrs_get_inventory_summary($pdo);
 
-// 如果选择了物料,加载库存明细
+// 获取搜索参数
+$search_type = $_GET['search_type'] ?? '';
+$search_value = $_GET['search_value'] ?? '';
 $selected_sku = $_GET['sku'] ?? '';
+
 $packages = [];
-if (!empty($selected_sku)) {
+$search_mode = false;
+
+// 如果有搜索条件，使用搜索
+if (!empty($search_type) && !empty($search_value)) {
+    $packages = mrs_search_instock_packages($pdo, $search_type, $search_value);
+    $search_mode = true;
+} elseif (!empty($selected_sku)) {
+    // 如果选择了物料，加载库存明细
     $packages = mrs_get_inventory_detail($pdo, $selected_sku, 'fifo');
 }
 ?>
@@ -48,12 +58,12 @@ if (!empty($selected_sku)) {
 
         <div class="content-wrapper">
             <div class="info-box">
-                <strong>操作说明:</strong> 选择物料后,勾选要出库的包裹。系统按先进先出(FIFO)排序,建议优先出库库存天数较长的包裹。
+                <strong>操作说明:</strong> 可以按物料选择或使用快速搜索功能查找包裹。系统按先进先出(FIFO)排序,建议优先出库库存天数较长的包裹。
             </div>
 
             <!-- 步骤1: 选择物料 -->
             <div class="form-group">
-                <label for="sku_select">步骤1: 选择物料</label>
+                <label for="sku_select">方式1: 按物料选择</label>
                 <select id="sku_select" class="form-control" onchange="loadPackages(this.value)">
                     <option value="">-- 请选择要出库的物料 --</option>
                     <?php foreach ($inventory as $item): ?>
@@ -63,6 +73,39 @@ if (!empty($selected_sku)) {
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <!-- 快速搜索 -->
+            <div class="form-group" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #e9ecef;">
+                <label>方式2: 快速搜索</label>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <div style="flex: 0 0 150px;">
+                        <label for="search_type" style="font-size: 12px; color: #666;">搜索类型</label>
+                        <select id="search_type" class="form-control">
+                            <option value="content_note" <?= $search_type === 'content_note' ? 'selected' : '' ?>>品名</option>
+                            <option value="box_number" <?= $search_type === 'box_number' ? 'selected' : '' ?>>箱号</option>
+                            <option value="tracking_tail" <?= $search_type === 'tracking_tail' ? 'selected' : '' ?>>快递单尾号</option>
+                            <option value="batch_name" <?= $search_type === 'batch_name' ? 'selected' : '' ?>>批次号</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="search_value" style="font-size: 12px; color: #666;">搜索内容</label>
+                        <input type="text" id="search_value" class="form-control"
+                               placeholder="输入搜索内容..."
+                               value="<?= htmlspecialchars($search_value) ?>">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="performSearch()" style="height: 38px;">
+                        🔍 搜索
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearSearch()" style="height: 38px;">
+                        清除
+                    </button>
+                </div>
+                <?php if ($search_mode): ?>
+                    <div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 4px; font-size: 14px;">
+                        📌 当前搜索: <strong><?= ['content_note'=>'品名', 'box_number'=>'箱号', 'tracking_tail'=>'快递单尾号', 'batch_name'=>'批次号'][$search_type] ?></strong> = "<?= htmlspecialchars($search_value) ?>" (找到 <?= count($packages) ?> 个结果)
+                    </div>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($packages)): ?>
@@ -136,6 +179,31 @@ if (!empty($selected_sku)) {
             window.location.href = '/mrs/ap/index.php?action=outbound';
         }
     }
+
+    function performSearch() {
+        const searchType = document.getElementById('search_type').value;
+        const searchValue = document.getElementById('search_value').value.trim();
+
+        if (!searchValue) {
+            alert('请输入搜索内容');
+            return;
+        }
+
+        window.location.href = '/mrs/ap/index.php?action=outbound&search_type=' +
+                                encodeURIComponent(searchType) +
+                                '&search_value=' + encodeURIComponent(searchValue);
+    }
+
+    function clearSearch() {
+        window.location.href = '/mrs/ap/index.php?action=outbound';
+    }
+
+    // 支持回车搜索
+    document.getElementById('search_value')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
 
     function toggleRow(row) {
         const checkbox = row.querySelector('input[type="checkbox"]');

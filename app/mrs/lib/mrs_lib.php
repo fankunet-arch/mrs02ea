@@ -741,3 +741,50 @@ function mrs_search_packages($pdo, $content_note = '', $batch_name = '', $box_nu
         return [];
     }
 }
+
+/**
+ * 搜索在库包裹（用于出库页面）
+ * @param PDO $pdo
+ * @param string $search_type 搜索类型: content_note|box_number|tracking_tail|batch_name
+ * @param string $search_value 搜索值
+ * @return array
+ */
+function mrs_search_instock_packages($pdo, $search_type, $search_value) {
+    try {
+        $sql = "SELECT * FROM mrs_package_ledger WHERE status = 'in_stock'";
+        $params = [];
+
+        if (!empty($search_value)) {
+            switch ($search_type) {
+                case 'content_note':
+                    $sql .= " AND content_note LIKE :search_value";
+                    $params['search_value'] = '%' . $search_value . '%';
+                    break;
+                case 'box_number':
+                    $sql .= " AND box_number LIKE :search_value";
+                    $params['search_value'] = '%' . $search_value . '%';
+                    break;
+                case 'tracking_tail':
+                    // 搜索快递单号尾号（后4位或更多）
+                    $sql .= " AND tracking_number LIKE :search_value";
+                    $params['search_value'] = '%' . $search_value;
+                    break;
+                case 'batch_name':
+                    $sql .= " AND batch_name LIKE :search_value";
+                    $params['search_value'] = '%' . $search_value . '%';
+                    break;
+            }
+        }
+
+        $sql .= " ORDER BY inbound_time ASC LIMIT 200";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to search instock packages: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
