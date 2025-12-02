@@ -11,6 +11,22 @@ if (!defined('MRS_ENTRY')) {
 // 获取 Express 批次列表
 $express_batches = mrs_get_express_batches();
 
+// 过滤批次：只显示有可入库包裹的批次（已清点且未全部入库）
+$available_batches = [];
+foreach ($express_batches as $batch) {
+    // 跳过没有清点包裹的批次
+    if ($batch['counted_count'] == 0) {
+        continue;
+    }
+
+    // 检查是否还有可入库的包裹
+    $available_pkgs = mrs_get_express_counted_packages($pdo, $batch['batch_name']);
+    if (count($available_pkgs) > 0) {
+        $batch['available_count'] = count($available_pkgs);
+        $available_batches[] = $batch;
+    }
+}
+
 // 选中的批次名称
 $selected_batch = $_GET['batch'] ?? '';
 $available_packages = [];
@@ -77,14 +93,21 @@ if (!empty($selected_batch)) {
                 <label for="batch_select">选择 Express 批次 <span class="required">*</span></label>
                 <select id="batch_select" class="form-control" onchange="window.location.href='/mrs/ap/index.php?action=inbound&batch=' + this.value">
                     <option value="">-- 请选择批次 --</option>
-                    <?php foreach ($express_batches as $batch): ?>
-                        <option value="<?= htmlspecialchars($batch['batch_name']) ?>"
-                                <?= $batch['batch_name'] === $selected_batch ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($batch['batch_name']) ?>
-                            (已清点: <?= $batch['counted_count'] ?> / 总数: <?= $batch['total_count'] ?>)
-                        </option>
-                    <?php endforeach; ?>
+                    <?php if (empty($available_batches)): ?>
+                        <option value="" disabled>暂无可入库的批次</option>
+                    <?php else: ?>
+                        <?php foreach ($available_batches as $batch): ?>
+                            <option value="<?= htmlspecialchars($batch['batch_name']) ?>"
+                                    <?= $batch['batch_name'] === $selected_batch ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($batch['batch_name']) ?>
+                                (可入库: <?= $batch['available_count'] ?> 个)
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </select>
+                <small class="form-text" style="color: #666;">
+                    只显示有已清点且未全部入库的批次
+                </small>
             </div>
 
             <?php if (!empty($selected_batch)): ?>
