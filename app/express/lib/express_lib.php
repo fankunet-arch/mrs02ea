@@ -812,9 +812,9 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                 SET content_note = :content_note,
                     package_status = :new_status,
                     counted_at = NOW(),
-                    counted_by = :operator,
+                    counted_by = :counted_by,
                     verified_at = COALESCE(verified_at, NOW()),
-                    verified_by = COALESCE(verified_by, :operator)
+                    verified_by = COALESCE(verified_by, :verified_by)
                 WHERE package_id = :package_id
             ");
 
@@ -822,7 +822,8 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                 'package_id' => $package_id,
                 'content_note' => $content_note,
                 'new_status' => $new_status,
-                'operator' => $operator
+                'counted_by' => $operator,
+                'verified_by' => $operator
             ]);
         } else {
             // 已经是counted或adjusted状态，只更新内容备注
