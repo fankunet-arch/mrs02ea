@@ -38,6 +38,7 @@ $allowed_actions = [
     'sku_manage',           // 物料管理
     'sku_save',             // 保存物料
     'status_change',        // 状态变更
+    'batch_print',          // 批次箱贴打印
 ];
 
 // 验证action是否允许

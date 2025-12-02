@@ -29,6 +29,10 @@ $current_action = $_GET['action'] ?? 'inventory_list';
            class="nav-link <?= $current_action === 'outbound' ? 'active' : '' ?>">
             出库核销
         </a>
+        <a href="/mrs/ap/index.php?action=batch_print"
+           class="nav-link <?= $current_action === 'batch_print' ? 'active' : '' ?>">
+            箱贴打印
+        </a>
         <a href="/mrs/ap/index.php?action=reports"
            class="nav-link <?= $current_action === 'reports' ? 'active' : '' ?>">
             统计报表

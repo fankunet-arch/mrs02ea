@@ -27,6 +27,7 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
         <div class="page-header">
             <h1>库存总览</h1>
             <div class="header-actions">
+                <a href="/mrs/ap/index.php?action=batch_print" class="btn btn-secondary">箱贴打印</a>
                 <a href="/mrs/ap/index.php?action=inbound" class="btn btn-primary">入库录入</a>
                 <a href="/mrs/ap/index.php?action=outbound" class="btn btn-success">出库核销</a>
             </div>
