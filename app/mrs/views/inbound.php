@@ -119,7 +119,7 @@ if (!empty($selected_batch)) {
                                            class="package-checkbox">
                                     <div>
                                         <strong>单号:</strong> <?= htmlspecialchars($pkg['tracking_number']) ?> |
-                                        <strong>物料:</strong> <?= htmlspecialchars($pkg['content_note']) ?> |
+                                        <strong>物料:</strong> <?= htmlspecialchars($pkg['content_note'] ?? '') ?: '未填写' ?> |
                                         <strong>清点时间:</strong> <?= date('Y-m-d H:i', strtotime($pkg['counted_at'])) ?>
                                     </div>
                                 </div>
