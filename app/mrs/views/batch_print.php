@@ -102,6 +102,7 @@ function mrs_tracking_tail($tracking_number)
             text-align: center;
             line-height: 1.1;
             word-break: break-all;
+            white-space: nowrap;
         }
 
         .label-meta {
@@ -109,11 +110,16 @@ function mrs_tracking_tail($tracking_number)
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 1.5mm 3mm;
-            font-size: clamp(20pt, 3.2vw, 26pt);
+            font-size: 24pt;
             font-weight: 800;
             line-height: 1.05;
+            white-space: nowrap;
+        }
+
+        .label-meta span {
+            white-space: nowrap;
         }
 
         .label-spec {
@@ -246,32 +252,25 @@ function mrs_tracking_tail($tracking_number)
             window.location.href = url.toString();
         }
 
-        (function adjustTitleSizes() {
-            const titles = document.querySelectorAll('.label-title');
-            titles.forEach(title => {
-                let size = 42;
-                const minSize = 20;
-                const maxSize = 42;
-                title.style.fontSize = `${size}pt`;
+        document.addEventListener('DOMContentLoaded', () => {
+            const fitText = (el, { max = 42, min = 16, step = 0.5 } = {}) => {
+                let size = max;
+                el.style.fontSize = `${size}pt`;
 
-                while (title.scrollWidth > title.clientWidth && size > minSize) {
-                    size -= 1;
-                    title.style.fontSize = `${size}pt`;
+                while (el.scrollWidth > el.clientWidth && size > min) {
+                    size -= step;
+                    el.style.fontSize = `${size}pt`;
                 }
+            };
 
-                if (title.scrollWidth === title.clientWidth && size < maxSize) {
-                    while (title.scrollWidth === title.clientWidth && size < maxSize) {
-                        size += 1;
-                        title.style.fontSize = `${size}pt`;
-                        if (title.scrollWidth > title.clientWidth) {
-                            size -= 1;
-                            title.style.fontSize = `${size}pt`;
-                            break;
-                        }
-                    }
-                }
+            document.querySelectorAll('.label-title').forEach((title) => {
+                fitText(title, { max: 42, min: 18, step: 0.5 });
             });
-        })();
+
+            document.querySelectorAll('.label-meta').forEach((meta) => {
+                fitText(meta, { max: 24, min: 16, step: 0.5 });
+            });
+        });
     </script>
 </body>
 </html>
