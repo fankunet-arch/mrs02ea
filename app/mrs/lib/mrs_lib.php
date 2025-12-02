@@ -190,8 +190,6 @@ function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
             INNER JOIN express_batch b ON p.batch_id = b.batch_id
             WHERE b.batch_name = :batch_name
               AND p.package_status IN ('counted', 'adjusted')
-              AND p.content_note IS NOT NULL
-              AND p.content_note != ''
             ORDER BY p.tracking_number ASC
         ");
 
@@ -284,7 +282,10 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
             try {
                 $batch_name = $pkg['batch_name'];
                 $tracking_number = $pkg['tracking_number'];
-                $content_note = $pkg['content_note'];
+                $content_note = trim((string)($pkg['content_note'] ?? ''));
+                if ($content_note === '') {
+                    $content_note = '未填写';
+                }
 
                 // 自动生成箱号
                 $box_number = mrs_get_next_box_number($pdo, $batch_name);
