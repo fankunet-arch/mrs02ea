@@ -111,9 +111,9 @@ function mrs_tracking_tail($tracking_number)
             align-items: center;
             flex-wrap: wrap;
             gap: 2mm 4mm;
-            font-size: clamp(20pt, 3.8vw, 28pt);
-            font-weight: 700;
-            line-height: 1.2;
+            font-size: clamp(26pt, 4.4vw, 34pt);
+            font-weight: 800;
+            line-height: 1.1;
         }
 
         .label-spec {
