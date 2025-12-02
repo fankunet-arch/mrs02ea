@@ -342,6 +342,70 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
 }
 
 /**
+ * 获取已入库的批次列表（在库箱数）
+ * @param PDO $pdo
+ * @return array
+ */
+function mrs_get_instock_batches($pdo) {
+    try {
+        $stmt = $pdo->prepare("SELECT
+                batch_name,
+                COUNT(*) AS in_stock_boxes,
+                MAX(inbound_time) AS last_inbound_time
+            FROM mrs_package_ledger
+            WHERE status = 'in_stock'
+            GROUP BY batch_name
+            ORDER BY last_inbound_time DESC, batch_name ASC");
+
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get instock batches: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取批次下的包裹（可选状态过滤）
+ * @param PDO $pdo
+ * @param string $batch_name
+ * @param string $status
+ * @return array
+ */
+function mrs_get_packages_by_batch($pdo, $batch_name, $status = 'in_stock') {
+    try {
+        $sql = "SELECT
+                    ledger_id,
+                    batch_name,
+                    tracking_number,
+                    content_note,
+                    box_number,
+                    spec_info,
+                    status,
+                    inbound_time
+                FROM mrs_package_ledger
+                WHERE batch_name = :batch_name";
+
+        $params = ['batch_name' => $batch_name];
+
+        if (!empty($status)) {
+            $sql .= " AND status = :status";
+            $params['status'] = $status;
+        }
+
+        $sql .= " ORDER BY box_number ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get packages by batch: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
  * 获取可用库存 (按物料分组)
  * @param PDO $pdo
  * @param string $content_note 可选,筛选特定物料
