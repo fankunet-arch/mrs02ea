@@ -109,8 +109,11 @@ function mrs_tracking_tail($tracking_number)
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 16pt;
-            font-weight: 600;
+            flex-wrap: wrap;
+            gap: 2mm 4mm;
+            font-size: clamp(18pt, 3vw, 22pt);
+            font-weight: 700;
+            line-height: 1.2;
         }
 
         .label-spec {
