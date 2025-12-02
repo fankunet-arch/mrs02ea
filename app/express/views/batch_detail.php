@@ -52,11 +52,25 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                         <span class="info-label">批次ID:</span>
                         <span class="info-value"><?= $batch['batch_id'] ?></span>
                     </div>
+                    <?php
+                    $status = trim($batch['status'] ?? 'inactive');
+
+                    if ($status === 'active') {
+                        $status_label = '进行中';
+                        $status_class = 'success';
+                    } elseif ($status === 'closed') {
+                        $status_label = '已关闭';
+                        $status_class = 'secondary';
+                    } else {
+                        $status_label = '未知状态';
+                        $status_class = 'secondary';
+                    }
+                    ?>
                     <div class="info-item">
                         <span class="info-label">状态:</span>
                         <span class="info-value">
-                            <span class="badge badge-<?= $batch['status'] === 'active' ? 'success' : 'secondary' ?>">
-                                <?= $batch['status'] === 'active' ? '进行中' : '已关闭' ?>
+                            <span class="badge badge-<?= $status_class ?>">
+                                <?= $status_label ?>
                             </span>
                         </span>
                     </div>
