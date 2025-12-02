@@ -25,12 +25,9 @@ define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
 define('MRS_VIEW_PATH', MRS_APP_PATH . '/views');
 define('MRS_API_PATH', MRS_APP_PATH . '/api');
 
-// 会话配置（与 Express 共享）
-if (!defined('SHARED_SESSION_NAME')) {
-    define('SHARED_SESSION_NAME', getenv('SHARED_SESSION_NAME') ?: 'MRS_SESSION');
-}
-
-define('MRS_SESSION_NAME', SHARED_SESSION_NAME);
+// 会话配置（与 Express 保持一致）
+// Express 默认使用 PHP 的默认会话名，直接复用即可
+define('MRS_SESSION_NAME', ini_get('session.name') ?: 'PHPSESSID');
 define('MRS_SESSION_TIMEOUT', 1800); // 30分钟
 
 /**
@@ -74,11 +71,11 @@ function get_mrs_db_connection() {
  */
 function mrs_start_secure_session() {
     if (session_status() === PHP_SESSION_NONE) {
+        // 参考 Express 的默认设置，仅调整必要参数
         ini_set('session.cookie_httponly', 1);
-        ini_set('session.use_only_cookies', 1);
-        ini_set('session.cookie_secure', 0); // 本地测试设为0
+        ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
         ini_set('session.use_strict_mode', 1);
-        ini_set('session.cookie_samesite', 'Lax');
+        ini_set('session.cookie_samesite', 'Strict');
         session_name(MRS_SESSION_NAME);
         session_start();
 

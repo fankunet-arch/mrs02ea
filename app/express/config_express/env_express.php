@@ -78,13 +78,6 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0'); // 生产环境设为0
 ini_set('log_errors', '1');
 
-// 会话配置（与 MRS 共享）
-if (!defined('SHARED_SESSION_NAME')) {
-    define('SHARED_SESSION_NAME', getenv('SHARED_SESSION_NAME') ?: 'MRS_SESSION');
-}
-
-define('EXPRESS_SESSION_NAME', SHARED_SESSION_NAME);
-
 // 确保日志目录存在
 if (!is_dir(EXPRESS_LOG_PATH)) {
     mkdir(EXPRESS_LOG_PATH, 0755, true);
@@ -205,11 +198,10 @@ function express_get_json_input() {
 function express_start_secure_session() {
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.cookie_httponly', 1);
-        ini_set('session.use_only_cookies', 1);
-        ini_set('session.cookie_secure', 0); // 与 MRS 保持一致，本地测试设为0
+        ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
         ini_set('session.use_strict_mode', 1);
-        ini_set('session.cookie_samesite', 'Lax');
-        session_name(EXPRESS_SESSION_NAME);
+        ini_set('session.cookie_samesite', 'Strict');
+
         session_start();
 
         if (!isset($_SESSION['initiated'])) {
