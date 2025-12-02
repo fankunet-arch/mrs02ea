@@ -791,7 +791,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
     try {
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("SELECT package_id, package_status FROM express_package WHERE package_id = :package_id");
+        $stmt = $pdo->prepare("SELECT package_id, package_status, batch_id FROM express_package WHERE package_id = :package_id");
         $stmt->execute(['package_id' => $package_id]);
         $package = $stmt->fetch();
 
@@ -800,16 +800,43 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             return ['success' => false, 'message' => '包裹不存在'];
         }
 
-        $update = $pdo->prepare("
-            UPDATE express_package
-            SET content_note = :content_note
-            WHERE package_id = :package_id
-        ");
+        $old_status = $package['package_status'];
+        $new_status = $old_status;
 
-        $update->execute([
-            'package_id' => $package_id,
-            'content_note' => $content_note
-        ]);
+        // 如果包裹状态是pending或verified，并且填写了内容备注，则自动变为counted（已清点）
+        if (in_array($old_status, ['pending', 'verified']) && !empty($content_note)) {
+            $new_status = 'counted';
+
+            $update = $pdo->prepare("
+                UPDATE express_package
+                SET content_note = :content_note,
+                    package_status = :new_status,
+                    counted_at = NOW(),
+                    counted_by = :operator,
+                    verified_at = COALESCE(verified_at, NOW()),
+                    verified_by = COALESCE(verified_by, :operator)
+                WHERE package_id = :package_id
+            ");
+
+            $update->execute([
+                'package_id' => $package_id,
+                'content_note' => $content_note,
+                'new_status' => $new_status,
+                'operator' => $operator
+            ]);
+        } else {
+            // 已经是counted或adjusted状态，只更新内容备注
+            $update = $pdo->prepare("
+                UPDATE express_package
+                SET content_note = :content_note
+                WHERE package_id = :package_id
+            ");
+
+            $update->execute([
+                'package_id' => $package_id,
+                'content_note' => $content_note
+            ]);
+        }
 
         $log = $pdo->prepare("
             INSERT INTO express_operation_log (package_id, operation_type, operator, old_status, new_status, notes)
@@ -819,16 +846,21 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
         $log->execute([
             'package_id' => $package_id,
             'operator' => $operator,
-            'old_status' => $package['package_status'],
-            'new_status' => $package['package_status'],
+            'old_status' => $old_status,
+            'new_status' => $new_status,
             'notes' => $content_note
         ]);
+
+        // 如果状态发生了变化，需要更新批次统计
+        if ($old_status !== $new_status) {
+            express_update_batch_statistics($pdo, $package['batch_id']);
+        }
 
         $pdo->commit();
 
         return [
             'success' => true,
-            'message' => '内容备注已更新',
+            'message' => ($old_status !== $new_status) ? '内容备注已更新，状态已变为已清点' : '内容备注已更新',
             'package' => express_get_package_by_id($pdo, $package_id)
         ];
     } catch (PDOException $e) {
