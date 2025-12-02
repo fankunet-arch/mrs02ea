@@ -71,6 +71,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
 
     <div class="main-content">
+        <!-- 版本标记: 2024-12-02 自定义包裹功能已添加 -->
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
@@ -152,9 +153,9 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
             </div>
 
             <!-- 添加自定义包裹区域 -->
-            <div class="bulk-import-section" style="margin-top: 30px;">
-                <h2>添加自定义包裹</h2>
-                <p class="form-text" style="margin-bottom: 15px;">
+            <div class="bulk-import-section" style="margin-top: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 5px; border: 2px dashed #28a745;">
+                <h2 style="color: #28a745;">📦 添加自定义包裹（拆分箱子功能）</h2>
+                <p class="form-text" style="margin-bottom: 15px; color: #666;">
                     用于添加拆分后的箱子。系统会自动生成虚拟快递单号（格式：CUSTOM-批次ID-序号），您可以打印标签并贴在箱子上。
                 </p>
                 <form id="custom-package-form">
