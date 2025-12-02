@@ -130,6 +130,7 @@ if (!empty($search_type) && !empty($search_value)) {
                                 <th>批次名称</th>
                                 <th>快递单号</th>
                                 <th>箱号</th>
+                                <th>内容备注</th>
                                 <th>规格</th>
                                 <th>入库时间</th>
                                 <th>库存天数</th>
@@ -146,6 +147,7 @@ if (!empty($search_type) && !empty($search_value)) {
                                     <td><?= htmlspecialchars($pkg['batch_name']) ?></td>
                                     <td><?= htmlspecialchars($pkg['tracking_number']) ?></td>
                                     <td><?= htmlspecialchars($pkg['box_number']) ?></td>
+                                    <td><strong><?= htmlspecialchars($pkg['content_note']) ?></strong></td>
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                     <td><?= $pkg['days_in_stock'] ?> 天</td>
