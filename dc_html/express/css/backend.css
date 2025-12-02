@@ -52,7 +52,9 @@ body {
 }
 
 .nav-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 12px 15px;
     color: #ecf0f1;
     text-decoration: none;
@@ -69,6 +71,12 @@ body {
 .nav-link.active {
     background-color: #3498db;
     font-weight: 500;
+}
+
+.nav-icon {
+    width: 18px;
+    text-align: center;
+    font-size: 16px;
 }
 
 /* 主内容区 */
@@ -159,6 +167,16 @@ body {
     color: white;
 }
 
+.badge-waiting {
+    background-color: #f0ad4e;
+    color: #2c1600;
+}
+
+.badge-info {
+    background-color: #3498db;
+    color: white;
+}
+
 .badge-pending {
     background-color: #ffc107;
     color: #856404;
@@ -208,6 +226,15 @@ body {
 
 .btn-secondary:hover {
     background-color: #7f8c8d;
+}
+
+.btn-highlight {
+    background-color: #f39c12;
+    color: white;
+}
+
+.btn-highlight:hover {
+    background-color: #d78a0d;
 }
 
 .btn-info {
@@ -460,6 +487,18 @@ body {
     margin-top: 30px;
     padding-top: 30px;
     border-top: 2px solid #e9ecef;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.section-header h2 {
+    margin: 0;
 }
 
 .packages-section h2 {

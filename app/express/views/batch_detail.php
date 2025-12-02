@@ -38,6 +38,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
+                <a href="/express/exp/index.php?action=batch_edit&batch_id=<?= $batch_id ?>" class="btn btn-primary">编辑批次</a>
                 <a href="/express/exp/index.php?action=batch_list" class="btn btn-secondary">返回列表</a>
             </div>
         </header>
@@ -178,7 +179,10 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
 
             <!-- 内容备注统计 -->
             <div class="packages-section" style="margin-top: 20px;">
-                <h2>批次内物品内容统计</h2>
+                <div class="section-header">
+                    <h2>批次内物品内容统计</h2>
+                    <a href="/express/exp/index.php?action=batch_print&batch_id=<?= $batch_id ?>" target="_blank" class="btn btn-highlight">打印标签预览</a>
+                </div>
                 <table class="data-table">
                     <thead>
                     <tr>

@@ -35,8 +35,11 @@ $allowed_actions = [
     'logout',                   // 登出
     'batch_list',               // 批次列表
     'batch_detail',             // 批次详情
+    'batch_print',              // 批次打印预览
     'batch_create',             // 创建批次页面
+    'batch_edit',               // 编辑批次页面
     'batch_create_save',        // 保存新批次
+    'batch_edit_save',          // 保存批次编辑
     'bulk_import',              // 批量导入页面
     'bulk_import_save',         // 保存批量导入
     'content_search',           // 内容备注搜索页面
@@ -67,6 +70,7 @@ if (!in_array($action, $allowed_actions)) {
 $api_actions = [
     'do_login',
     'batch_create_save',
+    'batch_edit_save',
     'bulk_import_save',
     'logout',
     'content_search_api',
