@@ -27,6 +27,17 @@ if (!empty($search_type) && !empty($search_value)) {
     // 如果选择了物料，加载库存明细
     $packages = mrs_get_inventory_detail($pdo, $selected_sku, 'fifo');
 }
+
+// 格式化快递单号：末尾4位红色加粗
+function format_tracking_number($tracking_number) {
+    $tracking_number = htmlspecialchars($tracking_number);
+    if (strlen($tracking_number) <= 4) {
+        return '<span style="color: #dc3545; font-weight: bold;">' . $tracking_number . '</span>';
+    }
+    $prefix = substr($tracking_number, 0, -4);
+    $tail = substr($tracking_number, -4);
+    return $prefix . '<span style="color: #dc3545; font-weight: bold;">' . $tail . '</span>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh">
@@ -145,7 +156,7 @@ if (!empty($search_type) && !empty($search_value)) {
                                                onchange="updateCount()">
                                     </td>
                                     <td><?= htmlspecialchars($pkg['batch_name']) ?></td>
-                                    <td><?= htmlspecialchars($pkg['tracking_number']) ?></td>
+                                    <td><?= format_tracking_number($pkg['tracking_number']) ?></td>
                                     <td><?= htmlspecialchars($pkg['box_number']) ?></td>
                                     <td><strong><?= htmlspecialchars($pkg['content_note']) ?></strong></td>
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>

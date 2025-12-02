@@ -455,7 +455,7 @@ function mrs_get_inventory_detail($pdo, $content_note, $order_by = 'fifo') {
                 ledger_id,
                 batch_name,
                 tracking_number,
-                content_note AS sku_name,
+                content_note,
                 box_number,
                 spec_info,
                 warehouse_location,
