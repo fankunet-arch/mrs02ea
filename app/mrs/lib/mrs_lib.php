@@ -128,40 +128,13 @@ function mrs_require_login() {
 // ============================================
 
 /**
- * 获取 Express 数据库连接（只读）
+ * 获取 Express 数据库连接（与 MRS 共享同一数据库）
  * @return PDO
  * @throws PDOException
  */
 function get_express_db_connection() {
-    static $express_pdo = null;
-
-    if ($express_pdo !== null) {
-        return $express_pdo;
-    }
-
-    try {
-        // 使用与 Express 相同的数据库连接（注意：Express 和 MRS 共享同一个数据库）
-        $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-            MRS_DB_HOST,
-            MRS_DB_PORT,
-            MRS_DB_NAME,
-            MRS_DB_CHARSET
-        );
-
-        $options = [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ];
-
-        $express_pdo = new PDO($dsn, MRS_DB_USER, MRS_DB_PASS, $options);
-
-        return $express_pdo;
-    } catch (PDOException $e) {
-        mrs_log('Express Database connection error: ' . $e->getMessage(), 'ERROR');
-        throw $e;
-    }
+    // Express 和 MRS 表在同一个数据库中，直接返回 MRS 的连接
+    return get_mrs_db_connection();
 }
 
 /**
@@ -172,6 +145,8 @@ function mrs_get_express_batches() {
     try {
         $express_pdo = get_express_db_connection();
 
+        // 暂时显示所有批次，不过滤状态
+        // TODO: 根据实际 Express 批次状态调整过滤条件
         $stmt = $express_pdo->prepare("
             SELECT
                 batch_id,
@@ -181,7 +156,6 @@ function mrs_get_express_batches() {
                 counted_count,
                 created_at
             FROM express_batch
-            WHERE status IN ('counting', 'completed')
             ORDER BY created_at DESC
             LIMIT 100
         ");
