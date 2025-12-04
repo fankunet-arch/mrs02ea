@@ -37,6 +37,8 @@ CREATE TABLE `mrs_package_ledger` (
     COMMENT '状态：在库/已出/损耗',
   `inbound_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
   `outbound_time` DATETIME DEFAULT NULL COMMENT '出库时间',
+  `destination_id` INT UNSIGNED DEFAULT NULL COMMENT '出库去向ID',
+  `destination_note` VARCHAR(255) DEFAULT NULL COMMENT '去向备注',
   `void_reason` VARCHAR(255) DEFAULT NULL COMMENT '损耗原因',
 
   -- 操作记录
@@ -59,10 +61,47 @@ CREATE TABLE `mrs_package_ledger` (
   KEY `idx_content_note` (`content_note`(50)) COMMENT '按内容查询（物料）',
   KEY `idx_batch_name` (`batch_name`),
   KEY `idx_inbound_time` (`inbound_time`),
-  KEY `idx_outbound_time` (`outbound_time`)
+  KEY `idx_outbound_time` (`outbound_time`),
+  KEY `idx_destination` (`destination_id`)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='MRS 包裹台账表（松耦合设计，通过冗余关联 Express）';
+
+-- 去向类型配置表
+CREATE TABLE `mrs_destination_types` (
+  `type_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '类型ID',
+  `type_code` VARCHAR(20) NOT NULL COMMENT '类型代码 (return, warehouse, store)',
+  `type_name` VARCHAR(50) NOT NULL COMMENT '类型名称 (退回、仓库调仓、发往门店)',
+  `is_enabled` TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+  `sort_order` INT DEFAULT 0 COMMENT '排序',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+
+  PRIMARY KEY (`type_id`),
+  UNIQUE KEY `uk_type_code` (`type_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='去向类型配置表';
+
+-- 去向管理表
+CREATE TABLE `mrs_destinations` (
+  `destination_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '去向ID',
+  `type_code` VARCHAR(20) NOT NULL COMMENT '去向类型代码',
+  `destination_name` VARCHAR(100) NOT NULL COMMENT '去向名称',
+  `destination_code` VARCHAR(50) DEFAULT NULL COMMENT '去向编码（可选）',
+  `contact_person` VARCHAR(50) DEFAULT NULL COMMENT '联系人',
+  `contact_phone` VARCHAR(20) DEFAULT NULL COMMENT '联系电话',
+  `address` TEXT DEFAULT NULL COMMENT '地址',
+  `remark` TEXT DEFAULT NULL COMMENT '备注',
+  `is_active` TINYINT(1) DEFAULT 1 COMMENT '是否有效',
+  `sort_order` INT DEFAULT 0 COMMENT '排序',
+  `created_by` VARCHAR(60) DEFAULT NULL COMMENT '创建人',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
+  PRIMARY KEY (`destination_id`),
+  KEY `idx_type_code` (`type_code`),
+  KEY `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='去向管理表';
 
 -- 删除不再需要的 mrs_sku 表（物料信息来自 content_note）
 DROP TABLE IF EXISTS `mrs_sku`;
@@ -181,12 +220,49 @@ ORDER BY inbound_time ASC;  -- FIFO 先进先出
 
 ### **4. MRS 出库操作**
 
+**出库流程**：
+1. 选择要出库的包裹
+2. 选择出库去向（退回、仓库调仓、发往门店等）
+3. 可选填写去向备注（如退货单号、调拨单号）
+4. 确认出库
+
 ```sql
+-- 出库操作（包含去向信息）
 UPDATE mrs_package_ledger
 SET status = 'shipped',
     outbound_time = NOW(),
+    destination_id = 1,  -- 去向ID（如：北京仓库）
+    destination_note = '调拨单号：DB20251204001',  -- 去向备注
     updated_by = 'admin'
 WHERE ledger_id IN (1, 2);
+```
+
+**去向管理**：
+```sql
+-- 查询所有有效去向
+SELECT
+  d.destination_id,
+  d.destination_name,
+  dt.type_name,
+  d.destination_code,
+  d.contact_person,
+  d.contact_phone
+FROM mrs_destinations d
+LEFT JOIN mrs_destination_types dt ON d.type_code = dt.type_code
+WHERE d.is_active = 1
+ORDER BY dt.sort_order, d.sort_order;
+
+-- 统计各去向的出库量
+SELECT
+  d.destination_name,
+  dt.type_name,
+  COUNT(l.ledger_id) as total_shipments
+FROM mrs_destinations d
+LEFT JOIN mrs_destination_types dt ON d.type_code = dt.type_code
+LEFT JOIN mrs_package_ledger l ON d.destination_id = l.destination_id
+  AND l.status = 'shipped'
+GROUP BY d.destination_id
+ORDER BY total_shipments DESC;
 ```
 
 ---
@@ -213,9 +289,16 @@ WHERE ledger_id IN (1, 2);
 │  │  - batch_name (冗余)           │                          │
 │  │  - tracking_number (冗余)      │                          │
 │  │  - content_note (冗余)         │                          │
-│  │  - box_number (MRS 分配)       │                          │
-│  │  - status (in_stock/shipped)   │                          │
-│  └────────────────────────────────┘                          │
+│  │  - box_number (MRS 分配)       │ ┌──────────────────────┐ │
+│  │  - status (in_stock/shipped)   │ │ mrs_destinations     │ │
+│  │  - destination_id ─────────────┼─┤ - destination_name   │ │
+│  └────────────────────────────────┘ │ - type_code          │ │
+│                                     │ - contact_person     │ │
+│  ┌──────────────────────┐           └──────────────────────┘ │
+│  │ mrs_destination_types│                    ↑                │
+│  │ - type_code          │────────────────────┘                │
+│  │ - type_name          │                                     │
+│  └──────────────────────┘                                     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -248,6 +331,8 @@ WHERE ledger_id IN (1, 2);
 | `content_note` | Express | 内容备注（冗余），即"物料名称" |
 | `box_number` | MRS | 4位编号，MRS 系统分配 |
 | `status` | MRS | 库存状态，MRS 系统管理 |
+| `destination_id` | MRS | 出库去向ID，关联 mrs_destinations |
+| `destination_note` | MRS | 去向备注，如退货单号、调拨单号 |
 
 ---
 
@@ -255,12 +340,32 @@ WHERE ledger_id IN (1, 2);
 
 1. ✅ 删除旧的 `mrs_package_ledger` 表
 2. ✅ 创建新的 `mrs_package_ledger` 表（无外键）
-3. ⏳ 删除 `mrs_sku` 表（不再需要）
-4. ⏳ 重写 MRS 入库逻辑（从 Express 查询 + 冗余存储）
-5. ⏳ 修改 MRS 库存查询（按 content_note 分组）
-6. ⏳ 测试完整流程
+3. ✅ 删除 `mrs_sku` 表（不再需要）
+4. ✅ 重写 MRS 入库逻辑（从 Express 查询 + 冗余存储）
+5. ✅ 修改 MRS 库存查询（按 content_note 分组）
+6. ✅ 添加去向管理功能（支持退回、仓库调仓、发往门店）
+7. ✅ 出库流程增强（必须选择去向）
+8. ✅ 替换系统弹出框为现代化模态框
+9. ✅ 测试完整流程
 
 ---
 
-**设计原则**: 松耦合，业务一致
-**最终确认日期**: 2025-12-01
+## 🎨 **用户体验改进**
+
+### 现代化模态框
+- 统一的模态框组件（替代传统 alert/confirm）
+- 支持自定义表单输入
+- 响应式设计，移动端友好
+- 优雅的动画效果
+- 同时应用于 MRS 和 EXPRESS 系统
+
+### 功能特性
+- 去向管理：支持添加、编辑、删除去向
+- 出库追踪：记录每次出库的去向和备注
+- 统计分析：查看各去向的出库量
+- 扩展性强：预留仓库调仓、发往门店功能接口
+
+---
+
+**设计原则**: 松耦合，业务一致，用户友好
+**最终确认日期**: 2025-12-04
