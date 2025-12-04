@@ -488,9 +488,11 @@ function mrs_get_inventory_detail($pdo, $content_note, $order_by = 'fifo') {
  * @param PDO $pdo
  * @param array $ledger_ids 要出库的台账ID数组
  * @param string $operator 操作员
+ * @param int $destination_id 去向ID（可选）
+ * @param string $destination_note 去向备注（可选）
  * @return array ['success' => bool, 'shipped' => int, 'message' => string]
  */
-function mrs_outbound_packages($pdo, $ledger_ids, $operator = '') {
+function mrs_outbound_packages($pdo, $ledger_ids, $operator = '', $destination_id = null, $destination_note = '') {
     try {
         $pdo->beginTransaction();
 
@@ -500,19 +502,21 @@ function mrs_outbound_packages($pdo, $ledger_ids, $operator = '') {
             UPDATE mrs_package_ledger
             SET status = 'shipped',
                 outbound_time = NOW(),
+                destination_id = ?,
+                destination_note = ?,
                 updated_by = ?
             WHERE ledger_id IN ($placeholders)
               AND status = 'in_stock'
         ");
 
-        $params = array_merge([$operator], $ledger_ids);
+        $params = array_merge([$destination_id, $destination_note, $operator], $ledger_ids);
         $stmt->execute($params);
 
         $shipped = $stmt->rowCount();
 
         $pdo->commit();
 
-        mrs_log("Outbound completed: shipped=$shipped", 'INFO', ['operator' => $operator]);
+        mrs_log("Outbound completed: shipped=$shipped, destination_id=$destination_id", 'INFO', ['operator' => $operator]);
 
         return [
             'success' => true,
@@ -797,6 +801,231 @@ function mrs_search_instock_packages($pdo, $search_type, $search_value) {
     } catch (PDOException $e) {
         mrs_log('Failed to search instock packages: ' . $e->getMessage(), 'ERROR');
         return [];
+    }
+}
+
+// ============================================
+// 去向管理函数
+// ============================================
+
+/**
+ * 获取所有去向类型
+ * @param PDO $pdo
+ * @return array
+ */
+function mrs_get_destination_types($pdo) {
+    try {
+        $stmt = $pdo->query("
+            SELECT * FROM mrs_destination_types
+            WHERE is_enabled = 1
+            ORDER BY sort_order ASC, type_id ASC
+        ");
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get destination types: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取所有有效去向
+ * @param PDO $pdo
+ * @param string $type_code 可选：按类型筛选
+ * @return array
+ */
+function mrs_get_destinations($pdo, $type_code = '') {
+    try {
+        $sql = "
+            SELECT
+                d.*,
+                dt.type_name
+            FROM mrs_destinations d
+            LEFT JOIN mrs_destination_types dt ON d.type_code = dt.type_code
+            WHERE d.is_active = 1
+        ";
+        $params = [];
+
+        if (!empty($type_code)) {
+            $sql .= " AND d.type_code = :type_code";
+            $params['type_code'] = $type_code;
+        }
+
+        $sql .= " ORDER BY d.sort_order ASC, d.destination_id ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get destinations: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取去向详情
+ * @param PDO $pdo
+ * @param int $destination_id
+ * @return array|null
+ */
+function mrs_get_destination_by_id($pdo, $destination_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                d.*,
+                dt.type_name
+            FROM mrs_destinations d
+            LEFT JOIN mrs_destination_types dt ON d.type_code = dt.type_code
+            WHERE d.destination_id = :destination_id
+        ");
+        $stmt->execute(['destination_id' => $destination_id]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get destination: ' . $e->getMessage(), 'ERROR');
+        return null;
+    }
+}
+
+/**
+ * 创建去向
+ * @param PDO $pdo
+ * @param array $data
+ * @return array
+ */
+function mrs_create_destination($pdo, $data) {
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO mrs_destinations
+            (type_code, destination_name, destination_code, contact_person,
+             contact_phone, address, remark, sort_order, created_by)
+            VALUES
+            (:type_code, :destination_name, :destination_code, :contact_person,
+             :contact_phone, :address, :remark, :sort_order, :created_by)
+        ");
+
+        $stmt->execute([
+            'type_code' => $data['type_code'],
+            'destination_name' => $data['destination_name'],
+            'destination_code' => $data['destination_code'] ?? null,
+            'contact_person' => $data['contact_person'] ?? null,
+            'contact_phone' => $data['contact_phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'remark' => $data['remark'] ?? null,
+            'sort_order' => $data['sort_order'] ?? 0,
+            'created_by' => $data['created_by'] ?? 'system'
+        ]);
+
+        $destination_id = $pdo->lastInsertId();
+
+        mrs_log("Destination created: id=$destination_id", 'INFO');
+
+        return [
+            'success' => true,
+            'destination_id' => $destination_id,
+            'message' => '去向创建成功'
+        ];
+    } catch (PDOException $e) {
+        mrs_log('Failed to create destination: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '创建失败: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * 更新去向
+ * @param PDO $pdo
+ * @param int $destination_id
+ * @param array $data
+ * @return array
+ */
+function mrs_update_destination($pdo, $destination_id, $data) {
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE mrs_destinations
+            SET type_code = :type_code,
+                destination_name = :destination_name,
+                destination_code = :destination_code,
+                contact_person = :contact_person,
+                contact_phone = :contact_phone,
+                address = :address,
+                remark = :remark,
+                sort_order = :sort_order
+            WHERE destination_id = :destination_id
+        ");
+
+        $stmt->execute([
+            'type_code' => $data['type_code'],
+            'destination_name' => $data['destination_name'],
+            'destination_code' => $data['destination_code'] ?? null,
+            'contact_person' => $data['contact_person'] ?? null,
+            'contact_phone' => $data['contact_phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'remark' => $data['remark'] ?? null,
+            'sort_order' => $data['sort_order'] ?? 0,
+            'destination_id' => $destination_id
+        ]);
+
+        mrs_log("Destination updated: id=$destination_id", 'INFO');
+
+        return [
+            'success' => true,
+            'message' => '去向更新成功'
+        ];
+    } catch (PDOException $e) {
+        mrs_log('Failed to update destination: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '更新失败: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * 删除去向（软删除）
+ * @param PDO $pdo
+ * @param int $destination_id
+ * @return array
+ */
+function mrs_delete_destination($pdo, $destination_id) {
+    try {
+        // 检查是否有关联的出库记录
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM mrs_package_ledger
+            WHERE destination_id = :destination_id
+        ");
+        $stmt->execute(['destination_id' => $destination_id]);
+        $count = $stmt->fetch()['count'];
+
+        if ($count > 0) {
+            return [
+                'success' => false,
+                'message' => "该去向已被使用 {$count} 次，不能删除"
+            ];
+        }
+
+        // 软删除
+        $stmt = $pdo->prepare("
+            UPDATE mrs_destinations
+            SET is_active = 0
+            WHERE destination_id = :destination_id
+        ");
+        $stmt->execute(['destination_id' => $destination_id]);
+
+        mrs_log("Destination deleted: id=$destination_id", 'INFO');
+
+        return [
+            'success' => true,
+            'message' => '去向已删除'
+        ];
+    } catch (PDOException $e) {
+        mrs_log('Failed to delete destination: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '删除失败: ' . $e->getMessage()
+        ];
     }
 }
 

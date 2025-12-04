@@ -66,6 +66,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批次详情 - <?= htmlspecialchars($batch['batch_name']) ?></title>
     <link rel="stylesheet" href="../css/backend.css">
+    <link rel="stylesheet" href="../css/modal.css">
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -337,7 +338,15 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
             }
 
             // 确认操作
-            if (!confirm(`确定要添加 ${count} 个自定义包裹吗？\n系统将自动生成虚拟快递单号。`)) {
+            const confirmed = await showConfirm(
+                `确定要添加 ${count} 个自定义包裹吗？\n系统将自动生成虚拟快递单号。`,
+                '确认添加',
+                {
+                    confirmText: '确认',
+                    cancelText: '取消'
+                }
+            );
+            if (!confirmed) {
                 return;
             }
 
@@ -394,63 +403,70 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
             button.addEventListener('click', async () => {
                 const packageId = button.getAttribute('data-package-id');
                 const currentNote = button.getAttribute('data-current-note') || '';
-                const newNote = prompt('请输入新的内容备注', currentNote);
 
-                const messageDiv = document.getElementById('update-message');
-                messageDiv.style.display = 'none';
+                // 使用模态框输入
+                const formHtml = `
+                    <form id="contentNoteForm" style="padding: 20px;">
+                        <div class="modal-form-group">
+                            <label class="modal-form-label">内容备注 *</label>
+                            <input type="text" name="content_note" class="modal-form-control"
+                                   value="${currentNote}" placeholder="如：香蕉、苹果等" required>
+                        </div>
+                    </form>
+                `;
 
-                if (newNote === null) {
-                    return;
-                }
-
-                if (newNote.trim() === '') {
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = '内容备注不能为空';
-                    messageDiv.style.display = 'block';
-                    return;
-                }
-
-                try {
-                    const resp = await fetch('/express/exp/index.php?action=update_content_note', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            package_id: packageId,
-                            content_note: newNote.trim()
-                        })
-                    });
-
-                    const data = await resp.json();
-
-                    if (!data.success) {
-                        messageDiv.className = 'message error';
-                        messageDiv.textContent = data.message || '更新失败';
-                        messageDiv.style.display = 'block';
-                        return;
-                    }
-
-                    // 更新行内容
-                    const row = button.closest('tr');
-                    if (row) {
-                        row.querySelectorAll('td')[3].textContent = newNote.trim();
-                        button.setAttribute('data-current-note', newNote.trim());
-                    }
-
-                    messageDiv.className = 'message success';
-                    messageDiv.textContent = data.message;
-                    messageDiv.style.display = 'block';
-
-                    // 刷新统计信息
-                    setTimeout(() => window.location.reload(), 800);
-                } catch (error) {
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = '网络错误：' + error.message;
-                    messageDiv.style.display = 'block';
-                }
+                await showModal({
+                    title: '修改内容备注',
+                    content: formHtml,
+                    footer: `
+                        <div class="modal-footer">
+                            <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                            <button class="modal-btn modal-btn-primary" onclick="submitContentNote(${packageId})">保存</button>
+                        </div>
+                    `
+                });
             });
         });
+    </script>
+
+    <script src="../js/modal.js"></script>
+    <script>
+    async function submitContentNote(packageId) {
+        const form = document.getElementById('contentNoteForm');
+        const newNote = form.querySelector('[name="content_note"]').value.trim();
+        const messageDiv = document.getElementById('update-message');
+
+        if (!newNote) {
+            await showAlert('内容备注不能为空', '提示', 'warning');
+            return;
+        }
+
+        try {
+            const resp = await fetch('/express/exp/index.php?action=update_content_note', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    package_id: packageId,
+                    content_note: newNote
+                })
+            });
+
+            const data = await resp.json();
+
+            if (!data.success) {
+                await showAlert(data.message || '更新失败', '错误', 'error');
+                return;
+            }
+
+            await showAlert(data.message, '成功', 'success');
+            window.modal.close(true);
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            await showAlert('网络错误：' + error.message, '错误', 'error');
+        }
+    }
     </script>
 </body>
 </html>
