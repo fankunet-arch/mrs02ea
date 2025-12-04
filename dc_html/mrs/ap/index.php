@@ -39,6 +39,8 @@ $allowed_actions = [
     'sku_save',             // 保存物料
     'status_change',        // 状态变更
     'batch_print',          // 批次箱贴打印
+    'destination_manage',   // 去向管理
+    'destination_save',     // 保存去向
 ];
 
 // 验证action是否允许
@@ -67,7 +69,8 @@ $api_actions = [
     'outbound_save',
     'logout',
     'sku_save',
-    'status_change'
+    'status_change',
+    'destination_save'
 ];
 
 // 路由到对应的action或API文件 (在app目录中)

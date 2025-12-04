@@ -11,6 +11,9 @@ if (!defined('MRS_ENTRY')) {
 // 获取库存汇总供选择
 $inventory = mrs_get_inventory_summary($pdo);
 
+// 获取所有有效去向
+$destinations = mrs_get_destinations($pdo);
+
 // 获取搜索参数
 $search_type = $_GET['search_type'] ?? '';
 $search_value = $_GET['search_value'] ?? '';
@@ -46,6 +49,7 @@ function format_tracking_number($tracking_number) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>出库核销 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
+    <link rel="stylesheet" href="/mrs/ap/css/modal.css">
     <style>
         .checkbox-cell {
             width: 40px;
@@ -53,6 +57,23 @@ function format_tracking_number($tracking_number) {
         }
         tr.selected {
             background-color: #dbeafe !important;
+        }
+        .destination-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .destination-group {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 15px;
+            align-items: start;
+        }
+        @media (max-width: 768px) {
+            .destination-group {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -167,6 +188,42 @@ function format_tracking_number($tracking_number) {
                         </tbody>
                     </table>
 
+                    <!-- 去向选择 -->
+                    <div class="destination-section">
+                        <h3 style="margin-top: 0; margin-bottom: 15px;">步骤3: 选择出库去向</h3>
+                        <div class="destination-group">
+                            <div class="form-group" style="margin: 0;">
+                                <label for="destination_select">出库去向 *</label>
+                                <select id="destination_select" class="form-control" required>
+                                    <option value="">-- 请选择去向 --</option>
+                                    <?php
+                                    $grouped = [];
+                                    foreach ($destinations as $dest) {
+                                        $grouped[$dest['type_name']][] = $dest;
+                                    }
+                                    foreach ($grouped as $typeName => $dests):
+                                    ?>
+                                        <optgroup label="<?= htmlspecialchars($typeName) ?>">
+                                            <?php foreach ($dests as $dest): ?>
+                                                <option value="<?= $dest['destination_id'] ?>">
+                                                    <?= htmlspecialchars($dest['destination_name']) ?>
+                                                    <?php if ($dest['destination_code']): ?>
+                                                        (<?= htmlspecialchars($dest['destination_code']) ?>)
+                                                    <?php endif; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label for="destination_note">去向备注（可选）</label>
+                                <input type="text" id="destination_note" class="form-control"
+                                       placeholder="如：退货单号、调拨单号等">
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-actions">
                         <button type="button" class="btn btn-success" onclick="submitOutbound()">
                             确认出库
@@ -184,6 +241,7 @@ function format_tracking_number($tracking_number) {
         </div>
     </div>
 
+    <script src="/mrs/ap/js/modal.js"></script>
     <script>
     function loadPackages(sku) {
         if (sku) {
@@ -193,12 +251,12 @@ function format_tracking_number($tracking_number) {
         }
     }
 
-    function performSearch() {
+    async function performSearch() {
         const searchType = document.getElementById('search_type').value;
         const searchValue = document.getElementById('search_value').value.trim();
 
         if (!searchValue) {
-            alert('请输入搜索内容');
+            await showAlert('请输入搜索内容', '提示', 'warning');
             return;
         }
 
@@ -251,46 +309,59 @@ function format_tracking_number($tracking_number) {
         document.getElementById('selectedCount').textContent = count;
     }
 
-    function submitOutbound() {
+    async function submitOutbound() {
         const selected = Array.from(document.querySelectorAll('input[name="ledger_ids[]"]:checked'))
             .map(cb => cb.value);
 
         if (selected.length === 0) {
-            alert('请至少选择一个包裹');
+            await showAlert('请至少选择一个包裹', '提示', 'warning');
             return;
         }
 
-        if (!confirm(`确认出库 ${selected.length} 个包裹?`)) {
+        const destinationId = document.getElementById('destination_select').value;
+        if (!destinationId) {
+            await showAlert('请选择出库去向', '提示', 'warning');
             return;
         }
 
-        fetch('/mrs/ap/index.php?action=outbound_save', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ledger_ids: selected
-            })
-        })
-        .then(response => response.json())
-        .then(result => {
-            const messageDiv = document.getElementById('resultMessage');
+        const destinationNote = document.getElementById('destination_note').value.trim();
+
+        const confirmed = await showConfirm(
+            `确认出库 ${selected.length} 个包裹?`,
+            '确认出库',
+            {
+                confirmText: '确认出库',
+                cancelText: '取消',
+                confirmClass: 'modal-btn-success'
+            }
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch('/mrs/ap/index.php?action=outbound_save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ledger_ids: selected,
+                    destination_id: destinationId,
+                    destination_note: destinationNote
+                })
+            });
+
+            const result = await response.json();
 
             if (result.success) {
-                messageDiv.innerHTML = `<div class="message success">${result.message}</div>`;
-
-                setTimeout(() => {
-                    window.location.href = '/mrs/ap/index.php?action=inventory_list';
-                }, 1500);
+                await showAlert(result.message, '成功', 'success');
+                window.location.href = '/mrs/ap/index.php?action=inventory_list';
             } else {
-                messageDiv.innerHTML = `<div class="message error">出库失败: ${result.message}</div>`;
+                await showAlert('出库失败: ' + result.message, '错误', 'error');
             }
-        })
-        .catch(error => {
-            document.getElementById('resultMessage').innerHTML =
-                `<div class="message error">网络错误: ${error}</div>`;
-        });
+        } catch (error) {
+            await showAlert('网络错误: ' + error.message, '错误', 'error');
+        }
     }
     </script>
 </body>

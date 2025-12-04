@@ -25,6 +25,7 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, 'fifo');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>库存明细 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
+    <link rel="stylesheet" href="/mrs/ap/css/modal.css">
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -83,40 +84,80 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, 'fifo');
         </div>
     </div>
 
+    <script src="/mrs/ap/js/modal.js"></script>
     <script>
-    function markVoid(ledgerId) {
-        if (!confirm('确定要将此包裹标记为损耗/作废吗?')) {
-            return;
-        }
+    async function markVoid(ledgerId) {
+        const confirmed = await showConfirm(
+            '确定要将此包裹标记为损耗/作废吗?',
+            '确认标记损耗',
+            {
+                type: 'warning',
+                confirmText: '确认',
+                cancelText: '取消'
+            }
+        );
 
-        const reason = prompt('请输入损耗原因:');
+        if (!confirmed) return;
+
+        // 显示输入框让用户输入损耗原因
+        const formHtml = `
+            <form id="voidReasonForm" style="padding: 20px;">
+                <div class="modal-form-group">
+                    <label class="modal-form-label">损耗原因 *</label>
+                    <textarea name="reason" class="modal-form-control" rows="3"
+                              placeholder="请描述损耗原因..." required></textarea>
+                </div>
+            </form>
+        `;
+
+        const reasonConfirmed = await showModal({
+            title: '输入损耗原因',
+            content: formHtml,
+            footer: `
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                    <button class="modal-btn modal-btn-primary" onclick="submitVoid(${ledgerId})">提交</button>
+                </div>
+            `
+        });
+    }
+
+    async function submitVoid(ledgerId) {
+        const form = document.getElementById('voidReasonForm');
+        const reason = form.querySelector('[name="reason"]').value.trim();
+
         if (!reason) {
+            await showAlert('请输入损耗原因', '提示', 'warning');
             return;
         }
 
-        fetch('/mrs/ap/index.php?action=status_change', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ledger_id: ledgerId,
-                new_status: 'void',
-                reason: reason
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+            const response = await fetch('/mrs/ap/index.php?action=status_change', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ledger_id: ledgerId,
+                    new_status: 'void',
+                    reason: reason
+                })
+            });
+
+            const data = await response.json();
+
             if (data.success) {
-                alert('操作成功');
+                await showAlert('操作成功', '成功', 'success');
                 location.reload();
             } else {
-                alert('操作失败: ' + data.message);
+                await showAlert('操作失败: ' + data.message, '错误', 'error');
             }
-        })
-        .catch(error => {
-            alert('网络错误: ' + error);
-        });
+        } catch (error) {
+            await showAlert('网络错误: ' + error.message, '错误', 'error');
+        }
+
+        // 关闭模态框
+        window.modal.close(true);
     }
     </script>
 </body>
