@@ -236,7 +236,7 @@ $destinations = mrs_get_destinations($pdo);
             </form>
         `;
 
-        window.showModal({
+        window.showDrawer({
             title: '添加去向',
             content: formHtml,
             footer: `
@@ -296,7 +296,7 @@ $destinations = mrs_get_destinations($pdo);
             </form>
         `;
 
-        window.showModal({
+        window.showDrawer({
             title: '编辑去向',
             content: formHtml,
             footer: `
