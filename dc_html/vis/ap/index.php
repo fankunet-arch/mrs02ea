@@ -18,8 +18,11 @@ require_once PROJECT_ROOT . '/app/vis/bootstrap.php';
 $action = $_GET['action'] ?? 'admin_list';
 $action = basename($action); // 防止路径遍历
 
-// 后台管理允许的action列表（全部需要登录）
+// 后台管理允许的action列表
 $allowed_actions = [
+    'login',                // 登录页面（无需登录）
+    'do_login',             // 登录处理（无需登录）
+    'logout',               // 登出（需要登录）
     'admin_list',           // 后台视频列表
     'admin_upload',         // 后台上传页面
     'video_upload',         // 处理上传
@@ -29,8 +32,13 @@ $allowed_actions = [
     'category_save',        // 保存分类（预留）
 ];
 
-// 所有后台操作都需要登录验证
-vis_require_login();
+// 无需登录的action列表
+$public_actions = ['login', 'do_login'];
+
+// 除了公开action，其他都需要登录验证
+if (!in_array($action, $public_actions)) {
+    vis_require_login();
+}
 
 // 验证action是否允许
 if (!in_array($action, $allowed_actions)) {
@@ -51,12 +59,14 @@ if (!in_array($action, $allowed_actions)) {
     exit;
 }
 
-// API action (返回JSON)
+// API action（执行操作后重定向，不返回JSON）
 $api_actions = [
-    'video_upload',
-    'video_save',
-    'video_delete',
-    'category_save',
+    'do_login',         // 登录处理
+    'logout',           // 登出处理
+    'video_upload',     // 上传视频
+    'video_save',       // 保存编辑
+    'video_delete',     // 删除视频
+    'category_save',    // 保存分类
 ];
 
 // 路由到对应的action或API文件 (在app目录中)

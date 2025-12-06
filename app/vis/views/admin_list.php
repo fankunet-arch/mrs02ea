@@ -52,7 +52,7 @@ $categories = vis_get_categories($pdo);
                 <h1 class="admin-title">VIS 视频灵感库 - 后台管理</h1>
                 <div class="admin-user">
                     <span>欢迎，<?php echo htmlspecialchars($_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? 'Admin'); ?></span>
-                    <a href="/mrs/ap/index.php?action=logout" class="btn btn-secondary">退出</a>
+                    <a href="/vis/ap/index.php?action=logout" class="btn btn-secondary">退出</a>
                 </div>
             </div>
         </header>

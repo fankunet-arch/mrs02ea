@@ -123,11 +123,11 @@ function vis_destroy_user_session() {
 }
 
 /**
- * 登录保护
+ * 登录保护（跳转到VIS独立登录页面）
  */
 function vis_require_login() {
     if (!vis_is_user_logged_in()) {
-        header('Location: /mrs/ap/index.php?action=login');
+        header('Location: /vis/ap/index.php?action=login');
         exit;
     }
 }

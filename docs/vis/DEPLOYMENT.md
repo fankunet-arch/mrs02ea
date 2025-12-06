@@ -277,11 +277,14 @@ sudo chmod 755 /tmp/vis_uploads
 
 ### 2. 后台管理页面（需要登录）
 
-**访问地址**：`http://dc.abcabc.net/vis/ap/index.php?action=admin_list`
+**后台首页**：`http://dc.abcabc.net/vis/ap/index.php?action=admin_list`
 
-**前置条件**：需要先登录 DC 系统（使用 `/mrs/ap/index.php?action=login`）
+**登录页面**：`http://dc.abcabc.net/vis/ap/index.php?action=login`
 
-**说明**：后台管理需要使用 `sys_users` 表中的账户登录
+**说明**：
+- VIS拥有独立的登录系统，不依赖其他系统
+- 使用 `sys_users` 表中的账户登录（与DC共享用户表）
+- 会话管理完全独立，登录后只能访问VIS后台
 
 ## 八、功能测试清单
 
