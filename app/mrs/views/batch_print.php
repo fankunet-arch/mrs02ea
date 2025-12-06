@@ -81,14 +81,14 @@ function mrs_tracking_tail($tracking_number)
         .label-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(60mm, 1fr));
-            gap: 12mm 10mm;
+            gap: 8mm 6mm;
         }
 
         .label-card {
             border: 1.6px solid #111;
             border-radius: 6px;
-            padding: 10mm 7mm;
-            min-height: 54mm;
+            padding: 6mm 5mm;
+            min-height: 45mm;
             background: white;
             display: flex;
             flex-direction: column;
@@ -106,7 +106,7 @@ function mrs_tracking_tail($tracking_number)
         }
 
         .label-meta {
-            margin-top: 8mm;
+            margin-top: 4mm;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -123,7 +123,7 @@ function mrs_tracking_tail($tracking_number)
         }
 
         .label-spec {
-            margin-top: 4mm;
+            margin-top: 2mm;
             font-size: 14pt;
             text-align: right;
             color: #333;
