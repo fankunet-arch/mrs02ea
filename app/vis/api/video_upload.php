@@ -38,6 +38,8 @@ try {
     $title = trim($_POST['title'] ?? '');
     $category = trim($_POST['category'] ?? '其他');
     $platform = trim($_POST['platform'] ?? 'other');
+    $duration = isset($_POST['duration']) ? (int)$_POST['duration'] : 0;  // 前端传来的时长（秒）
+    $coverBase64 = trim($_POST['cover_base64'] ?? '');  // 前端传来的封面图（Base64）
     $createdBy = $_SESSION['user_login'] ?? 'system';
 
     // 验证标题
@@ -69,12 +71,46 @@ try {
     // 生成R2存储路径
     $r2Key = vis_generate_r2_key($extension);
 
-    // 上传到R2
+    // 上传视频到R2
     vis_log("开始上传视频到R2: {$r2Key}", 'INFO');
     $uploadResult = vis_upload_to_r2($tmpPath, $r2Key, $mimeType);
 
     if (!$uploadResult['success']) {
         vis_json_response(false, null, '上传到云存储失败: ' . $uploadResult['message']);
+    }
+
+    // 处理封面图上传（如果前端提供了）
+    $coverUrl = null;
+    if (!empty($coverBase64)) {
+        try {
+            // 解码 Base64 图片
+            $coverData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $coverBase64));
+
+            if ($coverData !== false) {
+                // 生成封面图存储路径（与视频同目录，jpg格式）
+                $coverKey = str_replace('.' . $extension, '.jpg', $r2Key);
+
+                // 保存到临时文件
+                $coverTmpPath = VIS_UPLOAD_TEMP_DIR . '/' . uniqid('cover_') . '.jpg';
+                file_put_contents($coverTmpPath, $coverData);
+
+                // 上传封面到R2
+                vis_log("上传封面图到R2: {$coverKey}", 'INFO');
+                $coverUploadResult = vis_upload_to_r2($coverTmpPath, $coverKey, 'image/jpeg');
+
+                if ($coverUploadResult['success']) {
+                    // 使用 R2 的签名 URL 或自定义域名
+                    $coverUrl = VIS_R2_PUBLIC_URL . '/' . $coverKey;
+                } else {
+                    vis_log("封面图上传失败（不影响视频上传）: " . $coverUploadResult['message'], 'WARNING');
+                }
+
+                // 删除临时封面文件
+                @unlink($coverTmpPath);
+            }
+        } catch (Exception $e) {
+            vis_log("封面图处理异常（不影响视频上传）: " . $e->getMessage(), 'WARNING');
+        }
     }
 
     // 创建数据库记录
@@ -83,8 +119,8 @@ try {
         'platform' => $platform,
         'category' => $category,
         'r2_key' => $r2Key,
-        'cover_url' => null, // TODO: 可以实现视频首帧截图
-        'duration' => 0, // TODO: 可以通过ffmpeg获取时长
+        'cover_url' => $coverUrl,
+        'duration' => $duration,
         'file_size' => $fileSize,
         'mime_type' => $mimeType,
         'original_filename' => $originalFilename,

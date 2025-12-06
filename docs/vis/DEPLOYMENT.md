@@ -100,21 +100,76 @@ define('VIS_MAX_FILE_SIZE', 100 * 1024 * 1024);
 define('VIS_SIGNED_URL_EXPIRES', 300);
 ```
 
-### 3. PHP 上传限制
+### 3. PHP 上传限制（⚠️ 必须配置）
 
-编辑 `php.ini`：
+**重要提示**：大文件上传需要同时调整 PHP、Nginx 和应用配置，缺一不可！
+
+#### 3.1 编辑 php.ini
+
+找到 `php.ini` 文件（通常在 `/etc/php/8.2/fpm/php.ini`）：
 
 ```ini
+; 单个文件最大上传大小
 upload_max_filesize = 100M
-post_max_size = 100M
+
+; POST 数据最大大小（必须 >= upload_max_filesize）
+post_max_size = 105M
+
+; 脚本最大执行时间（秒）
 max_execution_time = 300
+
+; 输入解析时间（秒）
+max_input_time = 300
+
+; 内存限制（建议大于上传大小）
+memory_limit = 256M
 ```
 
-重启 PHP-FPM：
+**配置验证**：
 
 ```bash
+# 查看当前PHP配置
+php -i | grep -E "upload_max_filesize|post_max_size|max_execution_time"
+
+# 重启 PHP-FPM
 sudo systemctl restart php8.2-fpm
+sudo systemctl status php8.2-fpm
 ```
+
+#### 3.2 Nginx 上传限制（⚠️ 经常遗漏）
+
+在 Nginx 配置中添加 `client_max_body_size`（见下一节详细配置）：
+
+```nginx
+# 必须在 server 或 location 块中添加
+client_max_body_size 100M;
+```
+
+**常见错误**：
+- ❌ 仅修改了 PHP 配置，忘记 Nginx → 报错 `413 Request Entity Too Large`
+- ❌ `post_max_size` 小于 `upload_max_filesize` → 上传失败
+- ❌ 没有重启服务 → 配置不生效
+
+#### 3.3 上传配置验证脚本
+
+创建测试页面验证配置是否生效：
+
+```php
+<?php
+// 保存为 dc_html/vis/ap/test_upload_config.php
+phpinfo();
+// 查看 upload_max_filesize 和 post_max_size 的值
+?>
+```
+
+访问：`http://dc.abcabc.net/vis/ap/test_upload_config.php`
+
+**验证成功标准**：
+- `upload_max_filesize` = 100M
+- `post_max_size` = 105M（或更大）
+- `max_execution_time` = 300
+
+**验证后删除此测试文件！**
 
 ## 五、Web 服务器配置
 
@@ -129,6 +184,9 @@ server {
     root /home/user/mrs02ea/dc_html;
     index index.php index.html;
 
+    # ⚠️ 上传文件大小限制（必须配置）
+    client_max_body_size 100M;
+
     # VIS 前台展示（公开访问）
     location /vis/ {
         try_files $uri $uri/ /vis/ap/index.php?$query_string;
@@ -137,6 +195,9 @@ server {
     # VIS 后台管理（需要登录）
     location /vis/ap/ {
         try_files $uri $uri/ /vis/ap/index.php?$query_string;
+
+        # 如果只想在上传页面放宽限制，可以单独配置
+        # client_max_body_size 100M;
     }
 
     # 阻止直接访问 app 目录
@@ -151,7 +212,13 @@ server {
         fastcgi_index index.php;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+        # ⚠️ PHP 脚本超时时间（必须配置）
         fastcgi_read_timeout 300;
+
+        # ⚠️ FastCGI 缓冲区大小（可选，大文件上传时建议配置）
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
     }
 
     # 静态文件缓存

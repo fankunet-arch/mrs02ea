@@ -118,6 +118,8 @@ $categories = vis_get_categories($pdo);
         const progressText = document.getElementById('progressText');
 
         let selectedFile = null;
+        let videoDuration = 0;        // 视频时长（秒）
+        let videoCoverBase64 = null;  // 视频封面（Base64）
 
         // 点击上传区选择文件
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -167,10 +169,67 @@ $categories = vis_get_categories($pdo);
             fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
             fileSelected.style.display = 'block';
             uploadArea.style.display = 'none';
+
+            // 提取视频元数据（时长和封面图）
+            extractVideoMetadata(file);
+        }
+
+        /**
+         * 提取视频元数据（时长和首帧封面）
+         * @param {File} file - 视频文件
+         */
+        function extractVideoMetadata(file) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+
+            // 创建临时 URL
+            const videoURL = URL.createObjectURL(file);
+            video.src = videoURL;
+
+            video.onloadedmetadata = function() {
+                // 获取视频时长（秒，四舍五入）
+                videoDuration = Math.round(video.duration);
+
+                console.log(`视频时长: ${videoDuration} 秒`);
+
+                // 获取视频首帧作为封面
+                video.currentTime = 0.1; // 定位到0.1秒（避免全黑帧）
+            };
+
+            video.onseeked = function() {
+                try {
+                    // 使用 Canvas 截取视频帧
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // 转换为 Base64（JPEG 格式，质量 0.8）
+                    videoCoverBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+                    console.log('封面图已生成');
+
+                    // 释放临时 URL
+                    URL.revokeObjectURL(videoURL);
+                } catch (error) {
+                    console.error('封面图生成失败:', error);
+                    // 不中断上传流程，继续不带封面上传
+                    URL.revokeObjectURL(videoURL);
+                }
+            };
+
+            video.onerror = function() {
+                console.error('视频元数据加载失败');
+                URL.revokeObjectURL(videoURL);
+            };
         }
 
         function removeFile() {
             selectedFile = null;
+            videoDuration = 0;
+            videoCoverBase64 = null;
             fileInput.value = '';
             fileSelected.style.display = 'none';
             uploadArea.style.display = 'block';
@@ -204,6 +263,17 @@ $categories = vis_get_categories($pdo);
             formData.append('title', title);
             formData.append('category', category);
             formData.append('platform', platform);
+
+            // 添加视频元数据（时长和封面图）
+            if (videoDuration > 0) {
+                formData.append('duration', videoDuration);
+                console.log('上传视频时长:', videoDuration, '秒');
+            }
+
+            if (videoCoverBase64) {
+                formData.append('cover_base64', videoCoverBase64);
+                console.log('上传封面图: Base64 (长度:', videoCoverBase64.length, ')');
+            }
 
             // 显示进度条
             uploadProgress.style.display = 'block';
