@@ -3,6 +3,37 @@
  * Cloudflare R2 Storage Client (S3-Compatible)
  * 文件路径: app/vis/lib/r2_client.php
  * 说明: 轻量级R2存储客户端，实现S3协议的核心功能
+ *
+ * ============================================
+ * 技术参考文档（维护时必读）
+ * ============================================
+ *
+ * 1. AWS Signature Version 4 签名算法（核心）
+ *    https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html
+ *    https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
+ *
+ * 2. Cloudflare R2 官方文档
+ *    https://developers.cloudflare.com/r2/
+ *    https://developers.cloudflare.com/r2/api/s3/
+ *
+ * 3. S3 API 参考
+ *    PutObject: https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
+ *    DeleteObject: https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html
+ *    Presigned URLs: https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+ *
+ * ============================================
+ * 维护注意事项
+ * ============================================
+ *
+ * - R2 完全兼容 AWS S3 API（Signature V4）
+ * - 端点格式: https://{accountId}.r2.cloudflarestorage.com
+ * - 区域代码固定为 'auto'（R2特有）
+ * - 如遇签名错误，请检查：
+ *   1. 时间戳格式（必须是 UTC 时间）
+ *   2. Canonical Request 构建顺序
+ *   3. 字符串编码问题（URL编码）
+ *
+ * ============================================
  */
 
 class R2Client {
