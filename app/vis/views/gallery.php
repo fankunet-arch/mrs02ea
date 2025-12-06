@@ -67,7 +67,7 @@ $platformNames = [
             <div class="container">
                 <!-- 筛选栏 -->
                 <div class="gallery-filters">
-                    <form method="GET" action="/vis/ap/index.php">
+                    <form method="GET" action="/vis/index.php">
                         <input type="hidden" name="action" value="gallery">
                         <div class="filter-row">
                             <div class="filter-group">
@@ -191,7 +191,7 @@ $platformNames = [
                     showClose: false
                 });
 
-                const response = await fetch(`/vis/ap/index.php?action=play_sign&id=${id}`);
+                const response = await fetch(`/vis/index.php?action=play_sign&id=${id}`);
                 const result = await response.json();
 
                 // 关闭加载提示

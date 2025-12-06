@@ -18,10 +18,11 @@ VIS系统采用与MRS相同的"动静分离"架构：
 │   └── bootstrap.php           # 引导文件
 │
 ├── dc_html/vis/                # 前端入口（Web访问根目录）
+│   ├── index.php               # 公开访问入口（视频展示）
 │   └── ap/
 │       ├── css/                # 静态样式
 │       ├── js/                 # 静态脚本
-│       └── index.php           # 唯一入口
+│       └── index.php           # 后台管理入口（需登录）
 │
 └── docs/vis/                   # 文档和SQL脚本
     ├── schema.sql              # 数据库表结构
@@ -71,7 +72,7 @@ server {
 
     # VIS前台展示页面（公开访问）
     location /vis/ {
-        try_files $uri $uri/ /vis/ap/index.php?$query_string;
+        try_files $uri $uri/ /vis/index.php?$query_string;
     }
 
     # VIS后台管理（需要登录）
@@ -173,22 +174,22 @@ requestAnimationFrame(() => {
 
 ## API接口说明
 
-### 后台管理API
+### 后台管理API（需要登录）
 
 | 接口路径 | 方法 | 功能 | 参数 |
 |---------|------|------|------|
-| `/vis/ap/index.php?action=video_list` | GET | 获取视频列表 | `category`, `platform`, `page` |
-| `/vis/ap/index.php?action=video_upload` | POST | 上传视频 | `title`, `category`, `platform`, `file` |
+| `/vis/ap/index.php?action=admin_list` | GET | 后台视频列表 | `category`, `platform`, `page` |
+| `/vis/ap/index.php?action=admin_upload` | GET | 上传页面 | - |
+| `/vis/ap/index.php?action=video_upload` | POST | 上传视频 | `title`, `category`, `platform`, `video`, `duration`, `cover_base64` |
 | `/vis/ap/index.php?action=video_save` | POST | 保存视频元信息 | `id`, `title`, `category` |
 | `/vis/ap/index.php?action=video_delete` | POST | 删除视频 | `id` |
-| `/vis/ap/index.php?action=video_sign` | GET | 获取签名播放URL | `id` |
 
-### 前台展示API
+### 前台展示API（公开访问）
 
 | 接口路径 | 方法 | 功能 | 参数 |
 |---------|------|------|------|
-| `/vis/ap/index.php?action=gallery` | GET | 展示视频列表 | `category`, `platform` |
-| `/vis/ap/index.php?action=play_sign` | GET | 获取播放签名 | `id` |
+| `/vis/index.php?action=gallery` | GET | 展示视频列表 | `category`, `platform` |
+| `/vis/index.php?action=play_sign` | GET | 获取播放签名 | `id` |
 
 ## 验收清单
 

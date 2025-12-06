@@ -1,6 +1,6 @@
 /**
- * 现代化模态框组件
- * 文件路径: dc_html/mrs/ap/js/modal.js
+ * VIS现代化模态框组件
+ * 文件路径: dc_html/vis/ap/js/modal.js
  * 说明: 替代传统的alert()和confirm()，支持中间模态框和抽屉式模态框
  */
 

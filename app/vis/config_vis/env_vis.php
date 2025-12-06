@@ -49,9 +49,9 @@ define('VIS_API_PATH', VIS_APP_PATH . '/api');
 define('VIS_UPLOAD_TEMP_DIR', '/tmp/vis_uploads');
 
 // ============================================
-// 会话配置（与 MRS 保持一致，共享sys_users表）
+// 会话配置（VIS独立会话，避免与其他系统冲突）
 // ============================================
-define('VIS_SESSION_NAME', ini_get('session.name') ?: 'PHPSESSID');
+define('VIS_SESSION_NAME', 'VIS_SESSID');
 define('VIS_SESSION_TIMEOUT', 1800); // 30分钟
 define('VIS_SESSION_SAMESITE', 'Strict');
 
