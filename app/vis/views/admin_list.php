@@ -189,7 +189,7 @@ $categories = vis_get_categories($pdo);
         // 播放视频
         async function playVideo(id) {
             try {
-                const response = await fetch(`/vis/ap/index.php?action=play_sign&id=${id}`);
+                const response = await fetch(`/vis/index.php?action=play_sign&id=${id}`);
                 const result = await response.json();
 
                 if (!result.success) {

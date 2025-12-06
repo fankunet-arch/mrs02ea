@@ -13,6 +13,20 @@ VIS (Video Inspiration System) 是一个独立的视频灵感管理平台，采�
 - ✅ 自定义模态框（无系统 alert/confirm）
 - ✅ 防盗链保护（临时签名 URL）
 
+### URL 结构说明
+
+VIS 系统采用**前后台分离**的入口设计：
+
+| 访问路径 | 文件位置 | 功能 | 权限 |
+|---------|---------|------|------|
+| `https://域名/vis/index.php` | `dc_html/vis/index.php` | 前台视频展示 | 公开访问 |
+| `https://域名/vis/ap/index.php` | `dc_html/vis/ap/index.php` | 后台管理 | 需要登录 |
+
+**重要说明**：
+- `app/` 目录网络不可见，所有后端逻辑代码存放在此
+- 静态资源（CSS/JS）统一存放在 `dc_html/vis/ap/` 下
+- 前后台共享同一个 `bootstrap.php` 引导文件
+
 ## 二、部署前准备
 
 ### 1. 环境要求
@@ -253,17 +267,21 @@ sudo chmod 755 /tmp/vis_uploads
 
 ## 七、访问测试
 
-### 1. 前台展示页面
+### 1. 前台展示页面（公开访问）
 
-访问：`http://dc.abcabc.net/vis/ap/index.php?action=gallery`
+**直接访问**：`http://dc.abcabc.net/vis/index.php?action=gallery`
 
-或配置 URL 重写后：`http://dc.abcabc.net/vis/`
+**URL 重写后**：`http://dc.abcabc.net/vis/`
 
-### 2. 后台管理页面
+**说明**：前台页面无需登录，任何人都可以访问和观看视频
 
-访问：`http://dc.abcabc.net/vis/ap/index.php?action=admin_list`
+### 2. 后台管理页面（需要登录）
 
-**注意**：需要先登录 DC 系统（使用 `/mrs/ap/index.php?action=login`）
+**访问地址**：`http://dc.abcabc.net/vis/ap/index.php?action=admin_list`
+
+**前置条件**：需要先登录 DC 系统（使用 `/mrs/ap/index.php?action=login`）
+
+**说明**：后台管理需要使用 `sys_users` 表中的账户登录
 
 ## 八、功能测试清单
 
