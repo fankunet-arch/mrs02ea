@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-07 22:17:32
+-- 生成日期： 2025-12-07 23:14:04
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -110,6 +110,22 @@ CREATE TABLE `mrs_destinations` (
 -- --------------------------------------------------------
 
 --
+-- 替换视图以便查看 `mrs_destination_stats`
+-- （参见下面的实际视图）
+--
+DROP VIEW IF EXISTS `mrs_destination_stats`;
+CREATE TABLE `mrs_destination_stats` (
+`destination_id` int unsigned
+,`destination_name` varchar(100)
+,`type_name` varchar(50)
+,`total_shipments` bigint
+,`days_used` bigint
+,`last_used_time` datetime
+);
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `mrs_destination_types`
 --
 
@@ -168,22 +184,6 @@ CREATE TABLE `sys_users` (
   `user_last_login_at` datetime(6) DEFAULT NULL COMMENT '用户最后登录时间 (UTC)',
   `user_updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '记录最后更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci COMMENT='系统用户表';
-
--- --------------------------------------------------------
-
---
--- 替换视图以便查看 `v_destination_stats`
--- （参见下面的实际视图）
---
-DROP VIEW IF EXISTS `v_destination_stats`;
-CREATE TABLE `v_destination_stats` (
-`destination_id` int unsigned
-,`destination_name` varchar(100)
-,`type_name` varchar(50)
-,`total_shipments` bigint
-,`days_used` bigint
-,`last_used_time` datetime
-);
 
 --
 -- 转储表的索引
@@ -304,12 +304,12 @@ ALTER TABLE `sys_users`
 -- --------------------------------------------------------
 
 --
--- 视图结构 `v_destination_stats`
+-- 视图结构 `mrs_destination_stats`
 --
-DROP TABLE IF EXISTS `v_destination_stats`;
+DROP TABLE IF EXISTS `mrs_destination_stats`;
 
-DROP VIEW IF EXISTS `v_destination_stats`;
-CREATE ALGORITHM=UNDEFINED DEFINER=`mhdlmskp2kpxguj`@`%` SQL SECURITY DEFINER VIEW `v_destination_stats`  AS SELECT `d`.`destination_id` AS `destination_id`, `d`.`destination_name` AS `destination_name`, `dt`.`type_name` AS `type_name`, count(`l`.`ledger_id`) AS `total_shipments`, count(distinct cast(`l`.`outbound_time` as date)) AS `days_used`, max(`l`.`outbound_time`) AS `last_used_time` FROM ((`mrs_destinations` `d` left join `mrs_destination_types` `dt` on((`d`.`type_code` = `dt`.`type_code`))) left join `mrs_package_ledger` `l` on(((`d`.`destination_id` = `l`.`destination_id`) and (`l`.`status` = 'shipped')))) WHERE (`d`.`is_active` = 1) GROUP BY `d`.`destination_id`, `d`.`destination_name`, `dt`.`type_name` ORDER BY `total_shipments` DESC ;
+DROP VIEW IF EXISTS `mrs_destination_stats`;
+CREATE ALGORITHM=UNDEFINED DEFINER=`mhdlmskp2kpxguj`@`%` SQL SECURITY DEFINER VIEW `mrs_destination_stats`  AS SELECT `d`.`destination_id` AS `destination_id`, `d`.`destination_name` AS `destination_name`, `dt`.`type_name` AS `type_name`, count(`l`.`ledger_id`) AS `total_shipments`, count(distinct cast(`l`.`outbound_time` as date)) AS `days_used`, max(`l`.`outbound_time`) AS `last_used_time` FROM ((`mrs_destinations` `d` left join `mrs_destination_types` `dt` on((`d`.`type_code` = `dt`.`type_code`))) left join `mrs_package_ledger` `l` on(((`d`.`destination_id` = `l`.`destination_id`) and (`l`.`status` = 'shipped')))) WHERE (`d`.`is_active` = 1) GROUP BY `d`.`destination_id`, `d`.`destination_name`, `dt`.`type_name` ORDER BY `total_shipments` DESC ;
 
 --
 -- 限制导出的表
