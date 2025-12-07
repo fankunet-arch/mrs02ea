@@ -135,14 +135,15 @@
             loginBtn.disabled = true;
             btnText.style.display = 'none';
             btnLoading.style.display = 'flex';
-            usernameInput.disabled = true;
-            passwordInput.disabled = true;
+            // 使用readonly而不是disabled，避免字段在提交时被排除，导致后端收不到数据
+            usernameInput.readOnly = true;
+            passwordInput.readOnly = true;
         } else {
             loginBtn.disabled = false;
             btnText.style.display = 'inline';
             btnLoading.style.display = 'none';
-            usernameInput.disabled = false;
-            passwordInput.disabled = false;
+            usernameInput.readOnly = false;
+            passwordInput.readOnly = false;
         }
     }
 
