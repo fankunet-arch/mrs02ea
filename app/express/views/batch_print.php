@@ -105,14 +105,14 @@ function express_tracking_tail($tracking_number)
         .label-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(60mm, 1fr));
-            gap: 8mm 6mm;
+            gap: 10mm 8mm;
         }
 
         .label-card {
             border: 1px solid #111;
             border-radius: 6px;
-            padding: 6mm 5mm;
-            min-height: 45mm;
+            padding: 10mm 6mm;
+            min-height: 52mm;
             background: white;
             display: flex;
             flex-direction: column;
@@ -131,7 +131,7 @@ function express_tracking_tail($tracking_number)
         }
 
         .label-meta {
-            margin-top: 4mm;
+            margin-top: 8mm;
             display: flex;
             justify-content: flex-start;
             align-items: center;
@@ -181,7 +181,8 @@ function express_tracking_tail($tracking_number)
             <div class="label-card">
                 <div class="label-title"><?= htmlspecialchars($content) ?></div>
                 <div class="label-meta">
-                    <span class="tracking-tail">尾号：<?= htmlspecialchars($tail) ?></span>
+                    <span class="tracking-tail"><?= htmlspecialchars($tail) ?></span>
+                    <span class="coefficient">系数：</span>
                 </div>
             </div>
         <?php endforeach; ?>
