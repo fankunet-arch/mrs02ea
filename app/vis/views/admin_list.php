@@ -110,68 +110,89 @@ $categories = vis_get_categories($pdo);
 
             <!-- 内容区域 -->
             <div class="content-area">
-                <!-- 视频表格 -->
-                <div class="video-table-wrapper">
-                    <?php if (empty($videos)): ?>
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📹</div>
-                            <div class="empty-state-text">暂无视频</div>
-                        </div>
-                    <?php else: ?>
-                        <table class="video-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>标题</th>
-                                    <th>分类</th>
-                                    <th>平台</th>
-                                    <th>大小</th>
-                                    <th>上传时间</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($videos as $video): ?>
-                                    <tr>
-                                        <td><?php echo $video['id']; ?></td>
-                                        <td>
-                                            <strong><?php echo htmlspecialchars($video['title']); ?></strong>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-primary">
-                                                <?php echo htmlspecialchars($video['category']); ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <?php
-                                            $platformNames = [
-                                                'wechat' => '微信',
-                                                'xiaohongshu' => '小红书',
-                                                'douyin' => '抖音',
-                                                'other' => '其他'
-                                            ];
-                                            echo $platformNames[$video['platform']] ?? $video['platform'];
-                                            ?>
-                                        </td>
-                                        <td><?php echo round($video['file_size'] / 1024 / 1024, 2); ?> MB</td>
-                                        <td><?php echo date('Y-m-d H:i', strtotime($video['created_at'])); ?></td>
-                                        <td>
-                                            <div class="action-buttons">
-                                                <button class="btn-icon btn-play" onclick="playVideo(<?php echo $video['id']; ?>)" title="播放">
-                                                    ▶
-                                                </button>
-                                                <button class="btn-icon btn-edit" onclick="editVideo(<?php echo $video['id']; ?>)" title="编辑">
-                                                    ✏
-                                                </button>
-                                                <button class="btn-icon btn-delete" onclick="deleteVideo(<?php echo $video['id']; ?>)" title="删除">
-                                                    🗑
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                <!-- 视频网格 -->
+                <?php if (empty($videos)): ?>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📹</div>
+                        <div class="empty-state-text">暂无视频</div>
+                    </div>
+                <?php else: ?>
+                    <div class="grid-layout">
+                        <?php foreach ($videos as $video): ?>
+                            <div class="card video-card">
+                                <div class="card-cover">
+                                    <?php if (!empty($video['cover_url'])): ?>
+                                        <img src="<?php echo htmlspecialchars($video['cover_url']); ?>"
+                                             class="thumb"
+                                             alt="<?php echo htmlspecialchars($video['title']); ?>">
+                                    <?php else: ?>
+                                        <div class="thumb-placeholder">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                            </svg>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <!-- 分类标签 -->
+                                    <div class="badge-season">
+                                        <?php echo htmlspecialchars($video['category']); ?>
+                                    </div>
+
+                                    <!-- 平台标签 -->
+                                    <div class="badge-platform platform-<?php echo $video['platform']; ?>">
+                                        <?php
+                                        $platformNames = [
+                                            'wechat' => '微信',
+                                            'xiaohongshu' => '小红书',
+                                            'douyin' => '抖音',
+                                            'other' => '其他'
+                                        ];
+                                        echo $platformNames[$video['platform']] ?? $video['platform'];
+                                        ?>
+                                    </div>
+
+                                    <!-- 播放遮罩 -->
+                                    <div class="play-layer" onclick="playVideo(<?php echo $video['id']; ?>)">
+                                        <div class="play-btn">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card-info">
+                                    <div class="card-title"><?php echo htmlspecialchars($video['title']); ?></div>
+                                    <div class="card-meta">
+                                        <span class="meta-item">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <polyline points="12 6 12 12 16 14"></polyline>
+                                            </svg>
+                                            <?php echo date('Y-m-d', strtotime($video['created_at'])); ?>
+                                        </span>
+                                        <span class="meta-item">
+                                            <?php echo round($video['file_size'] / 1024 / 1024, 1); ?> MB
+                                        </span>
+                                    </div>
+                                    <div class="card-actions">
+                                        <button class="action-btn action-btn-edit" onclick="editVideo(<?php echo $video['id']; ?>)" title="编辑">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </button>
+                                        <button class="action-btn action-btn-delete" onclick="deleteVideo(<?php echo $video['id']; ?>)" title="删除">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
 
                         <!-- 分页 -->
                         <?php if ($totalPages > 1): ?>
