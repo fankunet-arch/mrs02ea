@@ -24,7 +24,12 @@
         passwordInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                loginForm.dispatchEvent(new Event('submit'));
+                // 触发原生提交流程，确保表单事件和数据提交通道都能运行
+                if (typeof loginForm.requestSubmit === 'function') {
+                    loginForm.requestSubmit();
+                } else {
+                    loginForm.submit();
+                }
             }
         });
 
