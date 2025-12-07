@@ -46,61 +46,70 @@ $categories = vis_get_categories($pdo);
 </head>
 <body>
     <div class="admin-wrapper">
-        <!-- 头部 -->
-        <header class="admin-header">
-            <div class="container admin-header-content">
-                <h1 class="admin-title">VIS 视频灵感库 - 后台管理</h1>
-                <div class="admin-user">
-                    <span>欢迎，<?php echo htmlspecialchars($_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? 'Admin'); ?></span>
-                    <a href="/vis/ap/index.php?action=logout" class="btn btn-secondary">退出</a>
-                </div>
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                TOPTEA VIS<span class="logo-dot">.</span>
             </div>
-        </header>
 
-        <!-- 主内容 -->
-        <main class="admin-main">
-            <div class="container">
-                <!-- 页面标题和操作 -->
-                <div class="video-list-header">
-                    <h2 class="video-list-title">视频列表</h2>
-                    <a href="/vis/ap/index.php?action=admin_upload" class="btn btn-primary">+ 上传视频</a>
+            <div class="nav-scroll">
+                <a href="/vis/ap/index.php?action=admin_list" class="nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    视频库
+                </a>
+                <a href="/vis/ap/index.php?action=admin_upload" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    上传视频
+                </a>
+
+                <div class="nav-group-label">分类筛选</div>
+                <?php foreach ($categories as $cat): ?>
+                <a href="?action=admin_list&category=<?php echo urlencode($cat['category_code']); ?>" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    <?php echo htmlspecialchars($cat['category_name']); ?>
+                </a>
+                <?php endforeach; ?>
+
+                <div class="nav-group-label">系统</div>
+                <a href="/vis/ap/index.php?action=logout" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    退出登录
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="main-wrapper">
+            <!-- 顶部栏 -->
+            <header class="admin-header">
+                <div class="page-title">全部视频</div>
+
+                <div class="search-container">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" class="search-input" placeholder="搜索视频标题...">
                 </div>
 
-                <!-- 筛选栏 -->
-                <div class="admin-filters">
-                    <form method="GET" action="/vis/ap/index.php">
-                        <input type="hidden" name="action" value="admin_list">
-                        <div class="admin-filter-row">
-                            <div class="form-group">
-                                <label class="form-label">分类</label>
-                                <select name="category" class="form-select">
-                                    <option value="">全部分类</option>
-                                    <?php foreach ($categories as $cat): ?>
-                                        <option value="<?php echo htmlspecialchars($cat['category_code']); ?>"
-                                            <?php echo $category === $cat['category_code'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($cat['category_name']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                <a href="/vis/ap/index.php?action=admin_upload" class="btn btn-primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    上传视频
+                </a>
 
-                            <div class="form-group">
-                                <label class="form-label">平台</label>
-                                <select name="platform" class="form-select">
-                                    <option value="">全部平台</option>
-                                    <option value="wechat" <?php echo $platform === 'wechat' ? 'selected' : ''; ?>>微信</option>
-                                    <option value="xiaohongshu" <?php echo $platform === 'xiaohongshu' ? 'selected' : ''; ?>>小红书</option>
-                                    <option value="douyin" <?php echo $platform === 'douyin' ? 'selected' : ''; ?>>抖音</option>
-                                    <option value="other" <?php echo $platform === 'other' ? 'selected' : ''; ?>>其他</option>
-                                </select>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary">筛选</button>
-                            <a href="/vis/ap/index.php?action=admin_list" class="btn btn-outline">重置</a>
-                        </div>
-                    </form>
+                <div class="admin-user">
+                    <span><?php echo htmlspecialchars($_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? 'Admin'); ?></span>
                 </div>
+            </header>
 
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <a href="?action=admin_list" class="filter-pill <?php echo empty($category) && empty($platform) ? 'active' : ''; ?>">全部</a>
+                <a href="?action=admin_list&platform=wechat" class="filter-pill <?php echo $platform === 'wechat' ? 'active' : ''; ?>">微信</a>
+                <a href="?action=admin_list&platform=xiaohongshu" class="filter-pill <?php echo $platform === 'xiaohongshu' ? 'active' : ''; ?>">小红书</a>
+                <a href="?action=admin_list&platform=douyin" class="filter-pill <?php echo $platform === 'douyin' ? 'active' : ''; ?>">抖音</a>
+                <a href="?action=admin_list&platform=other" class="filter-pill <?php echo $platform === 'other' ? 'active' : ''; ?>">其他</a>
+            </div>
+
+            <!-- 内容区域 -->
+            <div class="content-area">
                 <!-- 视频表格 -->
                 <div class="video-table-wrapper">
                     <?php if (empty($videos)): ?>
