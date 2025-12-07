@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-02 01:01:13
+-- 生成日期： 2025-12-07 22:17:32
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -87,6 +87,45 @@ CREATE TABLE `express_package` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `mrs_destinations`
+--
+
+DROP TABLE IF EXISTS `mrs_destinations`;
+CREATE TABLE `mrs_destinations` (
+  `destination_id` int UNSIGNED NOT NULL COMMENT '去向ID',
+  `type_code` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '去向类型代码',
+  `destination_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '去向名称',
+  `destination_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '去向编码（可选）',
+  `contact_person` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '联系人',
+  `contact_phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '联系电话',
+  `address` text COLLATE utf8mb4_unicode_ci COMMENT '地址',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT '是否有效',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `created_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='去向管理表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_destination_types`
+--
+
+DROP TABLE IF EXISTS `mrs_destination_types`;
+CREATE TABLE `mrs_destination_types` (
+  `type_id` int UNSIGNED NOT NULL COMMENT '类型ID',
+  `type_code` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '类型代码 (return, warehouse, store)',
+  `type_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '类型名称 (退回、仓库调仓、发往门店)',
+  `is_enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='去向类型配置表';
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `mrs_package_ledger`
 --
 
@@ -102,6 +141,8 @@ CREATE TABLE `mrs_package_ledger` (
   `status` enum('in_stock','shipped','void') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'in_stock' COMMENT '状态',
   `inbound_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
   `outbound_time` datetime DEFAULT NULL COMMENT '出库时间',
+  `destination_id` int UNSIGNED DEFAULT NULL COMMENT '出库去向ID',
+  `destination_note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '去向备注',
   `void_reason` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '损耗原因',
   `created_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
   `updated_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '更新人',
@@ -127,6 +168,22 @@ CREATE TABLE `sys_users` (
   `user_last_login_at` datetime(6) DEFAULT NULL COMMENT '用户最后登录时间 (UTC)',
   `user_updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '记录最后更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci COMMENT='系统用户表';
+
+-- --------------------------------------------------------
+
+--
+-- 替换视图以便查看 `v_destination_stats`
+-- （参见下面的实际视图）
+--
+DROP VIEW IF EXISTS `v_destination_stats`;
+CREATE TABLE `v_destination_stats` (
+`destination_id` int unsigned
+,`destination_name` varchar(100)
+,`type_name` varchar(50)
+,`total_shipments` bigint
+,`days_used` bigint
+,`last_used_time` datetime
+);
 
 --
 -- 转储表的索引
@@ -162,6 +219,21 @@ ALTER TABLE `express_package`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
+-- 表的索引 `mrs_destinations`
+--
+ALTER TABLE `mrs_destinations`
+  ADD PRIMARY KEY (`destination_id`),
+  ADD KEY `idx_type_code` (`type_code`),
+  ADD KEY `idx_active` (`is_active`);
+
+--
+-- 表的索引 `mrs_destination_types`
+--
+ALTER TABLE `mrs_destination_types`
+  ADD PRIMARY KEY (`type_id`),
+  ADD UNIQUE KEY `uk_type_code` (`type_code`);
+
+--
 -- 表的索引 `mrs_package_ledger`
 --
 ALTER TABLE `mrs_package_ledger`
@@ -172,7 +244,8 @@ ALTER TABLE `mrs_package_ledger`
   ADD KEY `idx_content_note` (`content_note`(50)),
   ADD KEY `idx_batch_name` (`batch_name`),
   ADD KEY `idx_inbound_time` (`inbound_time`),
-  ADD KEY `idx_outbound_time` (`outbound_time`);
+  ADD KEY `idx_outbound_time` (`outbound_time`),
+  ADD KEY `idx_destination` (`destination_id`);
 
 --
 -- 表的索引 `sys_users`
@@ -205,6 +278,18 @@ ALTER TABLE `express_package`
   MODIFY `package_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '包裹ID';
 
 --
+-- 使用表AUTO_INCREMENT `mrs_destinations`
+--
+ALTER TABLE `mrs_destinations`
+  MODIFY `destination_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '去向ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_destination_types`
+--
+ALTER TABLE `mrs_destination_types`
+  MODIFY `type_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '类型ID';
+
+--
 -- 使用表AUTO_INCREMENT `mrs_package_ledger`
 --
 ALTER TABLE `mrs_package_ledger`
@@ -215,6 +300,16 @@ ALTER TABLE `mrs_package_ledger`
 --
 ALTER TABLE `sys_users`
   MODIFY `user_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '用户唯一ID (主键)';
+
+-- --------------------------------------------------------
+
+--
+-- 视图结构 `v_destination_stats`
+--
+DROP TABLE IF EXISTS `v_destination_stats`;
+
+DROP VIEW IF EXISTS `v_destination_stats`;
+CREATE ALGORITHM=UNDEFINED DEFINER=`mhdlmskp2kpxguj`@`%` SQL SECURITY DEFINER VIEW `v_destination_stats`  AS SELECT `d`.`destination_id` AS `destination_id`, `d`.`destination_name` AS `destination_name`, `dt`.`type_name` AS `type_name`, count(`l`.`ledger_id`) AS `total_shipments`, count(distinct cast(`l`.`outbound_time` as date)) AS `days_used`, max(`l`.`outbound_time`) AS `last_used_time` FROM ((`mrs_destinations` `d` left join `mrs_destination_types` `dt` on((`d`.`type_code` = `dt`.`type_code`))) left join `mrs_package_ledger` `l` on(((`d`.`destination_id` = `l`.`destination_id`) and (`l`.`status` = 'shipped')))) WHERE (`d`.`is_active` = 1) GROUP BY `d`.`destination_id`, `d`.`destination_name`, `dt`.`type_name` ORDER BY `total_shipments` DESC ;
 
 --
 -- 限制导出的表
@@ -231,6 +326,12 @@ ALTER TABLE `express_operation_log`
 --
 ALTER TABLE `express_package`
   ADD CONSTRAINT `fk_package_batch` FOREIGN KEY (`batch_id`) REFERENCES `express_batch` (`batch_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_destinations`
+--
+ALTER TABLE `mrs_destinations`
+  ADD CONSTRAINT `fk_destination_type` FOREIGN KEY (`type_code`) REFERENCES `mrs_destination_types` (`type_code`) ON DELETE RESTRICT ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
