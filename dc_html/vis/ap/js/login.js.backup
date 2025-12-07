@@ -39,22 +39,22 @@
      * @param {Event} e
      */
     function handleSubmit(e) {
+        e.preventDefault();
+
         const username = usernameInput.value.trim();
         const password = passwordInput.value;
 
         // 验证输入
         if (!validateInputs(username, password)) {
-            e.preventDefault(); // 只在验证失败时阻止提交
             return;
         }
 
-        // 验证通过，显示加载状态
+        // 显示加载状态
         setLoading(true);
 
-        // 让表单正常提交（不需要调用submit()，因为这是submit事件处理器）
-        // 表单会自动提交到 action="/vis/ap/index.php?action=do_login"
+        // 提交表单（使用原生表单提交，服务端处理）
+        loginForm.submit();
     }
-
 
     /**
      * 验证输入

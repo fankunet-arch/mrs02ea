@@ -1,7 +1,7 @@
 /**
  * VIS Video Inspiration System - Login Page Styles
  * 文件路径: dc_html/vis/ap/css/login.css
- * 说明: VIS独立登录页面样式（完全独立，不依赖任何其他系统）
+ * 说明: VIS独立登录页面样式 - 暗色主题
  */
 
 /* ============================================
@@ -20,7 +20,7 @@ html, body {
                  'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 14px;
     line-height: 1.6;
-    color: #333;
+    color: #eff2f5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -34,16 +34,17 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0e1014 0%, #1b1f26 100%);
     padding: 20px;
 }
 
 .login-box {
     width: 100%;
     max-width: 420px;
-    background: #ffffff;
+    background: #1b1f26;
+    border: 1px solid #2b303b;
     border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     padding: 40px;
     animation: fadeInUp 0.6s ease-out;
 }
@@ -69,14 +70,15 @@ html, body {
 
 .login-header h1 {
     font-size: 28px;
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 700;
+    color: #eff2f5;
     margin-bottom: 8px;
+    letter-spacing: -0.02em;
 }
 
 .login-header .subtitle {
     font-size: 14px;
-    color: #7f8c8d;
+    color: #9ca3af;
     font-weight: 400;
 }
 
@@ -95,9 +97,9 @@ html, body {
 }
 
 .alert-error {
-    background-color: #fee;
-    border: 1px solid #fcc;
-    color: #c33;
+    background-color: rgba(220, 38, 38, 0.15);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    color: #ef4444;
 }
 
 .alert .icon {
@@ -117,7 +119,7 @@ html, body {
     display: block;
     font-size: 14px;
     font-weight: 500;
-    color: #34495e;
+    color: #9ca3af;
     margin-bottom: 8px;
 }
 
@@ -126,28 +128,29 @@ html, body {
     height: 44px;
     padding: 0 14px;
     font-size: 14px;
-    color: #2c3e50;
-    background-color: #f8f9fa;
-    border: 2px solid #e9ecef;
+    color: #eff2f5;
+    background-color: #0e1014;
+    border: 1px solid #2b303b;
     border-radius: 8px;
     outline: none;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
 .form-control::placeholder {
-    color: #adb5bd;
+    color: #626a78;
 }
 
 .form-control:focus {
-    background-color: #ffffff;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background-color: #14171c;
+    border-color: #ff6b4a;
+    box-shadow: 0 0 0 1px rgba(255, 107, 74, 0.2);
 }
 
 .form-control:disabled {
-    background-color: #e9ecef;
+    background-color: #14171c;
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.4;
 }
 
 /* ============================================
@@ -160,7 +163,7 @@ html, body {
     padding: 0 24px;
     height: 44px;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1;
     text-align: center;
     text-decoration: none;
@@ -168,28 +171,29 @@ html, body {
     border-radius: 8px;
     cursor: pointer;
     outline: none;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     user-select: none;
 }
 
 .btn-primary {
     color: #ffffff;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    background: #ff6b4a;
+    box-shadow: 0 4px 12px rgba(255, 107, 74, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
+    background: #e85a3a;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 6px 20px rgba(255, 107, 74, 0.4);
 }
 
 .btn-primary:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 2px 8px rgba(255, 107, 74, 0.2);
 }
 
 .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.4;
     cursor: not-allowed;
     transform: none;
 }
@@ -252,13 +256,13 @@ html, body {
 
 .footer-text {
     font-size: 13px;
-    color: #7f8c8d;
+    color: #9ca3af;
     margin-bottom: 6px;
 }
 
 .footer-hint {
     font-size: 12px;
-    color: #95a5a6;
+    color: #626a78;
 }
 
 /* ============================================
@@ -305,6 +309,6 @@ html, body {
 /* Focus visible for keyboard navigation */
 .form-control:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid #667eea;
+    outline: 2px solid #ff6b4a;
     outline-offset: 2px;
 }

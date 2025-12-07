@@ -1,90 +1,160 @@
-<?php
-/**
- * VIS 登录调试文件 - 用于诊断登录跳转问题
- */
-define('VIS_ENTRY', true);
-define('PROJECT_ROOT', dirname(dirname(dirname(__DIR__))));
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIS登录调试</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0e1014;
+            color: #eff2f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ff6b4a;
+        }
+        h2 {
+            font-size: 18px;
+            margin: 30px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #2b303b;
+        }
+        .section {
+            background: #1b1f26;
+            border: 1px solid #2b303b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status.ok { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status.error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        code {
+            background: #14171c;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #60a5fa;
+        }
+        .test-form {
+            background: #14171c;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #2b303b;
+        }
+        .form-group { margin-bottom: 15px; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0e1014;
+            border: 1px solid #2b303b;
+            border-radius: 6px;
+            color: #eff2f5;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #ff6b4a;
+        }
+        button {
+            background: #ff6b4a;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover { background: #e85a3a; }
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 VIS登录系统诊断</h1>
 
-header('Content-Type: text/html; charset=UTF-8');
-echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>VIS Debug</title>";
-echo "<style>body{font-family:monospace;padding:20px;background:#f0f0f0;}";
-echo ".debug{background:#fff;padding:15px;margin:10px 0;border-left:4px solid #007bff;}";
-echo ".error{border-left-color:#dc3545;background:#fff5f5;}";
-echo ".success{border-left-color:#28a745;background:#f5fff5;}";
-echo "h2{margin:0 0 10px 0;color:#333;}</style></head><body>";
+        <div class="section">
+            <h2>1. 当前Session状态</h2>
+            <?php
+            session_start();
+            echo "<ul>";
+            echo "<li>Session ID: <code>" . session_id() . "</code></li>";
+            echo "<li>Session Name: <code>" . session_name() . "</code></li>";
+            echo "<li>登录状态: ";
+            if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+                echo '<span class="status ok">已登录</span>';
+            } else {
+                echo '<span class="status error">未登录</span>';
+            }
+            echo "</li>";
+            echo "</ul>";
+            ?>
+        </div>
 
-echo "<h1>VIS 登录系统调试</h1>";
+        <div class="section">
+            <h2>2. 登录JavaScript问题</h2>
+            <div class="error-box">
+                <p style="color: #ef4444; font-weight: 600;">⚠️ 发现表单提交死循环问题</p>
+                <p style="color: #9ca3af; font-size: 14px; margin-top: 10px;">
+                    <code>login.js</code> 第41-56行存在逻辑错误：<br>
+                    • <code>e.preventDefault()</code> 阻止表单提交<br>
+                    • 然后调用 <code>loginForm.submit()</code><br>
+                    • 但preventDefault已阻止提交，表单无法发送到服务器
+                </p>
+            </div>
+        </div>
 
-// 1. 检查文件路径
-echo "<div class='debug'><h2>1. 文件路径检查</h2>";
-echo "PROJECT_ROOT: " . PROJECT_ROOT . "<br>";
-echo "Bootstrap: " . PROJECT_ROOT . '/app/vis/bootstrap.php<br>';
-echo "Bootstrap exists: " . (file_exists(PROJECT_ROOT . '/app/vis/bootstrap.php') ? '✅ YES' : '❌ NO') . "</div>";
+        <div class="section">
+            <h2>3. 测试登录（绕过JavaScript）</h2>
+            <p style="color: #9ca3af; margin-bottom: 15px;">
+                此表单直接提交到服务器，不经过JavaScript验证。
+            </p>
 
-// 2. 加载bootstrap
-try {
-    require_once PROJECT_ROOT . '/app/vis/bootstrap.php';
-    echo "<div class='debug success'><h2>2. Bootstrap加载</h2>✅ 成功加载</div>";
-} catch (Exception $e) {
-    echo "<div class='debug error'><h2>2. Bootstrap加载</h2>❌ 失败: " . htmlspecialchars($e->getMessage()) . "</div>";
-    exit;
-}
+            <div class="test-form">
+                <form method="POST" action="/vis/ap/index.php?action=do_login">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <button type="submit">直接登录（无JS验证）</button>
+                </form>
+            </div>
+        </div>
 
-// 3. 检查关键常量
-echo "<div class='debug'><h2>3. 关键常量</h2>";
-echo "VIS_VIEW_PATH: " . (defined('VIS_VIEW_PATH') ? VIS_VIEW_PATH : '❌ 未定义') . "<br>";
-echo "VIS_API_PATH: " . (defined('VIS_API_PATH') ? VIS_API_PATH : '❌ 未定义') . "<br>";
-echo "VIS_SESSION_NAME: " . (defined('VIS_SESSION_NAME') ? VIS_SESSION_NAME : '❌ 未定义') . "</div>";
-
-// 4. 检查登录页面文件
-echo "<div class='debug'><h2>4. 登录页面文件</h2>";
-$login_view = VIS_VIEW_PATH . '/login.php';
-echo "Login view path: " . $login_view . "<br>";
-echo "File exists: " . (file_exists($login_view) ? '✅ YES' : '❌ NO') . "<br>";
-if (file_exists($login_view)) {
-    echo "File size: " . filesize($login_view) . " bytes<br>";
-    echo "Modified: " . date('Y-m-d H:i:s', filemtime($login_view));
-}
-echo "</div>";
-
-// 5. 检查会话
-echo "<div class='debug'><h2>5. 会话信息</h2>";
-echo "Session status: " . (session_status() === PHP_SESSION_ACTIVE ? '✅ Active' : '⚠️ Not active') . "<br>";
-echo "Session name: " . session_name() . "<br>";
-echo "Is logged in: " . (function_exists('vis_is_user_logged_in') && vis_is_user_logged_in() ? '✅ YES' : '❌ NO') . "</div>";
-
-// 6. 检查 vis_require_login 函数
-echo "<div class='debug'><h2>6. vis_require_login 函数</h2>";
-if (function_exists('vis_require_login')) {
-    echo "✅ 函数已定义<br>";
-    // 读取函数源代码
-    $ref = new ReflectionFunction('vis_require_login');
-    $filename = $ref->getFileName();
-    $start_line = $ref->getStartLine() - 1;
-    $end_line = $ref->getEndLine();
-    $length = $end_line - $start_line;
-    $source = file($filename);
-    $body = implode("", array_slice($source, $start_line, $length));
-    echo "<pre style='background:#f8f8f8;padding:10px;overflow:auto;'>" . htmlspecialchars($body) . "</pre>";
-} else {
-    echo "❌ 函数未定义";
-}
-echo "</div>";
-
-// 7. 模拟路由逻辑
-echo "<div class='debug'><h2>7. 路由模拟（action=login）</h2>";
-$test_action = 'login';
-$public_actions = ['login', 'do_login'];
-$allowed_actions = ['login', 'do_login', 'logout', 'admin_list', 'admin_upload', 'video_upload', 'video_save', 'video_delete'];
-
-echo "Test action: <strong>{$test_action}</strong><br>";
-echo "Is in public_actions: " . (in_array($test_action, $public_actions) ? '✅ YES' : '❌ NO') . "<br>";
-echo "Should call vis_require_login: " . (!in_array($test_action, $public_actions) ? '❌ YES (会跳转)' : '✅ NO (不会跳转)') . "<br>";
-echo "Is in allowed_actions: " . (in_array($test_action, $allowed_actions) ? '✅ YES' : '❌ NO') . "</div>";
-
-// 8. 实际访问测试
-echo "<div class='debug'><h2>8. 实际访问测试</h2>";
-echo "<a href='/vis/ap/index.php?action=login' style='display:inline-block;padding:10px 20px;background:#007bff;color:#fff;text-decoration:none;border-radius:4px;'>点击测试: /vis/ap/index.php?action=login</a>";
-echo "</div>";
-
-echo "</body></html>";
+        <div class="section">
+            <h2>4. 快速操作</h2>
+            <p><a href="/vis/ap/index.php?action=login" style="color: #60a5fa;">→ 返回登录页面</a></p>
+            <p><a href="/vis/ap/test_layout.html" style="color: #60a5fa;">→ 查看布局测试页面</a></p>
+        </div>
+    </div>
+</body>
+</html>
