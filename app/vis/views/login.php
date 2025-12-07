@@ -68,14 +68,8 @@ unset($_SESSION['login_error']);
                     >
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
-                    <span class="btn-text">登录</span>
-                    <span class="btn-loading" style="display: none;">
-                        <svg class="spinner" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10" stroke-width="3" fill="none"></circle>
-                        </svg>
-                        登录中...
-                    </span>
+                <button type="submit" class="btn btn-primary btn-block">
+                    登录
                 </button>
             </form>
 
@@ -85,7 +79,5 @@ unset($_SESSION['login_error']);
             </div>
         </div>
     </div>
-
-    <script src="/vis/ap/js/login.js"></script>
 </body>
 </html>
